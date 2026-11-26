@@ -1,0 +1,15 @@
+*.iml
+.gradle
+/local.properties
+/.idea/
+.DS_Store
+/build
+/app/build/
+/captures
+.externalNativeBuild
+.cxx
+# Camera originals used to tune the conversion (multi-GB, personal footage).
+/insta360example/*.mp4
+/osmopocketexample/*.MP4
+/osmopocketexample/*.mp4
+.kotlin/
