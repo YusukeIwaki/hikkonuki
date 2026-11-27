@@ -44,7 +44,8 @@ enum class KeepReason(val label: String) {
 }
 
 /**
- * The decisions of slim_videos.py, ported so they can be unit tested without a device:
+ * The decisions of the ffmpeg scripts this conversion was first tuned with on a Mac,
+ * kept as plain functions so they can be unit tested without a device:
  * long edge capped at 2560 (never upscaled, even dimensions), HEVC at a bitrate chosen from
  * the output pixel count and frame rate, 10-bit kept, HDR/Log left alone, and no re-encode
  * at all when it would not save at least 20%.
@@ -65,12 +66,12 @@ object SlimPlanner {
         return 8_000_000.0 * (pixels / (1920.0 * 1080.0)).pow(0.75) * max(1.0, safeFps / 30.0)
     }
 
-    /** 8 Mbps at 1080p30 and 12 Mbps at 1440p30, as in slim_videos.py. */
+    /** 8 Mbps at 1080p30 and 12 Mbps at 1440p30. */
     fun autoBitrateBps(width: Int, height: Int, fps: Double): Int =
         max(750_000, (autoBitrateRaw(width, height, fps) / 1_000_000).roundToInt() * 1_000_000)
 
     /**
-     * slim_videos.py re-encoded samples and raised the bitrate (12 -> 18 -> 27 -> 40 Mbps)
+     * The desktop workflow re-encoded samples and raised the bitrate (12 -> 18 -> 27 -> 40 Mbps)
      * until SSIM passed. Measuring SSIM on the phone would double the export time, so this
      * uses what that tuning revealed instead: the Osmo Pocket's own VBR encoder already
      * spends more bits on exactly the clips that needed the higher steps. Calibrated on the

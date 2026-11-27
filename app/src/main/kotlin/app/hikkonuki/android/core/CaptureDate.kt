@@ -25,7 +25,7 @@ data class CaptureDate(val epochMillis: Long, val source: DateSource, val utcOff
  *   difference is the camera's time zone (correct even when the phone has since moved);
  * - they show the same digits -> ambiguous (camera in UTC, or local time stored as UTC).
  *   DJI is known to write real UTC, so its container wins; otherwise the file name is
- *   read in the phone's zone, as slim_videos.py did for Insta360;
+ *   read in the phone's zone;
  * - anything else -> the container is bogus and the file name wins.
  */
 object CaptureDateResolver {

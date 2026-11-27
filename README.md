@@ -8,7 +8,7 @@ Osmo Pocket 4P / Insta360 Ace Pro 2 を **USB** でAndroidにつなぎ、写真�
 
 ## 動画の変換
 
-`osmopocketexample/slim_videos.py` と `insta360example/slim_videos.py` の方針を端末向けに移植しています。
+もともとパソコン上で ffmpeg を使って変換していたときの方針（カメラごとにPythonスクリプトで調整したもの）を、端末向けに移植しています。
 
 | 項目 | 内容 |
 | --- | --- |
@@ -99,7 +99,8 @@ adb push clip.mp4 /sdcard/Android/data/app.hikkonuki.android/files/usb_inbox/
 ### テスト用ファイルの作り直し
 
 ```bash
-python3 tools/make_fixtures.py   # 実サンプルからヘッダだけ抜いたMP4（単体テスト用）
+# カメラの実ファイルからヘッダだけ抜いたMP4（単体テスト用）。元動画はリポジトリに含めていません
+python3 tools/make_fixtures.py --insta360 VID_xxx.mp4 --dji DJI_xxx.MP4
 tools/make_test_videos.sh        # カメラの形式に似せた合成動画（端末テスト用）
 python3 design/generate_icon.py  # アイコン
 ```

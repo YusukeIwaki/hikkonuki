@@ -4,9 +4,15 @@
 Media data, thumbnails and padding are dropped (so the files do not play), but every
 header the app reads or rewrites is the camera's own. Serial numbers are blanked.
 
-    python3 tools/make_fixtures.py
+The camera originals are not part of the repository; pass one recording from each camera:
+
+    python3 tools/make_fixtures.py --insta360 VID_20260510_132733_019.mp4 --dji DJI_20261107113403_0005_D.MP4
+
+Either may be omitted to leave that fixture as it is. The date and model assertions in
+Mp4Test describe the recordings the committed fixtures were made from, so update them
+when regenerating from different files.
 """
-import re, struct, subprocess, sys
+import argparse, re, struct, subprocess, sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
@@ -96,18 +102,23 @@ def scrub(data, secrets):
 
 
 def main():
+    parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    parser.add_argument("--insta360", type=Path, help="an Insta360 recording (VID_*.mp4)")
+    parser.add_argument("--dji", type=Path, help="an Osmo Pocket recording (DJI_*.MP4)")
+    args = parser.parse_args()
     OUT.mkdir(parents=True, exist_ok=True)
-    insta = ROOT / "insta360example/VID_20260510_132733_019.mp4"
-    dji = ROOT / "osmopocketexample/DJI_20261107113403_0005_D.MP4"
     # Serial numbers are looked up in the sources, so none is ever written down here.
-    insta_data = skeleton(insta, 2048)
-    insta_serials = re.findall(rb"([A-Z0-9]{10,20})[\x00-\x1f]{0,4}Insta360 ", insta_data)
-    dji_serial = subprocess.run(
-        ["ffprobe", "-v", "error", "-show_entries", "format_tags=com.dji.camera.CameraSerialNumber",
-         "-of", "default=nw=1:nk=1", str(dji)], check=True, capture_output=True).stdout.strip()
-    assert insta_serials and dji_serial, "serial numbers not found; refusing to write unscrubbed fixtures"
-    (OUT / "insta360_skeleton.mp4").write_bytes(scrub(insta_data, insta_serials))
-    (OUT / "dji_skeleton.mp4").write_bytes(scrub(skeleton(dji), [dji_serial]))
+    if args.insta360:
+        data = skeleton(args.insta360, 2048)
+        serials = re.findall(rb"([A-Z0-9]{10,20})[\x00-\x1f]{0,4}Insta360 ", data)
+        assert serials, "serial number not found; refusing to write an unscrubbed fixture"
+        (OUT / "insta360_skeleton.mp4").write_bytes(scrub(data, serials))
+    if args.dji:
+        serial = subprocess.run(
+            ["ffprobe", "-v", "error", "-show_entries", "format_tags=com.dji.camera.CameraSerialNumber",
+             "-of", "default=nw=1:nk=1", str(args.dji)], check=True, capture_output=True).stdout.strip()
+        assert serial, "serial number not found; refusing to write an unscrubbed fixture"
+        (OUT / "dji_skeleton.mp4").write_bytes(scrub(skeleton(args.dji), [serial]))
     # Playable outputs shaped like what the phone's muxer writes (moov last) and like
     # a "faststart" file (moov first).
     common = ["ffmpeg", "-y", "-loglevel", "error", "-f", "lavfi", "-i", "testsrc=size=64x36:rate=10:duration=1",

@@ -9,8 +9,8 @@ import java.nio.ByteOrder
 /**
  * Draws decoder frames (an external texture) to the current EGL surface on the GPU.
  *
- * Downscaling uses a separable Lanczos-3 filter, like the `scale=...:flags=lanczos` step
- * of slim_videos.py: a horizontal pass into a 10-bit intermediate texture, then a vertical
+ * Downscaling uses a separable Lanczos-3 filter, like ffmpeg's `scale=...:flags=lanczos`:
+ * a horizontal pass into a 10-bit intermediate texture, then a vertical
  * pass to the encoder. Plain bilinear sampling at 4K -> 1440p skips source pixels and
  * aliases fine detail. When no scaling is needed the frame is copied in one pass.
  */

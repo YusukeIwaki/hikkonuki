@@ -40,7 +40,7 @@ import kotlin.math.roundToInt
  *
  * Compared with Media3's Transformer (kept as a fallback) this preserves 10-bit sources
  * as HEVC Main10, scales with Lanczos instead of bilinear, and does not re-encode audio:
- * the three places where the phone output used to fall short of slim_videos.py.
+ * the three places where the phone output used to fall short of an ffmpeg conversion on a Mac.
  *
  * @param tenBit encode Main10 through a 10-bit EGL surface. Requires a 10-bit source;
  *   construct a second instance with false as the fallback for encoders that refuse it.
