@@ -23,6 +23,18 @@ class CameraAndDateTest {
     }
 
     @Test
+    fun deviceNameFromUsbStrings() {
+        // What an Insta360 actually reports: the company name must not crowd out the product.
+        assertEquals("Insta360 Ace Pro 2", DeviceName.of("Arashi Vision", "Insta360 Ace Pro 2"))
+        assertEquals("OsmoPocket4P", DeviceName.of("DJI", "OsmoPocket4P"))
+        assertEquals("Insta360 Ace Pro 2", DeviceName.of("insta360", "  Insta360_Ace_Pro_2 "))
+        assertEquals("Ace Pro 2", DeviceName.of(null, "Ace Pro 2"))
+        assertEquals("DJI", DeviceName.of("DJI", " "))
+        assertNull(DeviceName.of(null, null))
+        assertNull(DeviceName.of("", "  "))
+    }
+
+    @Test
     fun readsModels() {
         assertEquals("OsmoPocket4P", CameraDetector.djiModelFromEncoderTag("DJI OsmoPocket4P"))
         assertNull(CameraDetector.djiModelFromEncoderTag("Lavf62.12.100"))

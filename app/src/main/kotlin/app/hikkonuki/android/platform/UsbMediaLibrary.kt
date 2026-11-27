@@ -2,6 +2,7 @@ package app.hikkonuki.android.platform
 
 import android.content.Context
 import android.content.Intent
+import android.hardware.usb.UsbConstants
 import android.hardware.usb.UsbManager
 import android.media.MediaMetadataRetriever
 import android.net.Uri
@@ -11,6 +12,7 @@ import android.provider.DocumentsContract
 import androidx.exifinterface.media.ExifInterface
 import app.hikkonuki.android.BuildConfig
 import app.hikkonuki.android.core.CaptureDateResolver
+import app.hikkonuki.android.core.DeviceName
 import app.hikkonuki.android.core.MediaKind
 import app.hikkonuki.android.ui.LibrarySnapshot
 import app.hikkonuki.android.ui.MediaDetails
@@ -75,7 +77,26 @@ class UsbMediaLibrary(private val context: Context, private val source: AndroidS
             connected = true,
             items = unique.sortedWith(compareByDescending<MediaItem> { it.dateTakenMillis ?: 0L }.thenBy { it.displayName }),
             watchedFolders = trees.map(Uri::toString),
+            deviceName = deviceName(),
         )
+    }
+
+    /**
+     * The attached camera's own name: the USB product string of the device that offers
+     * mass storage, or failing that the label Android shows for the mounted volume.
+     */
+    private fun deviceName(): String? {
+        val devices = context.getSystemService(UsbManager::class.java)?.deviceList?.values.orEmpty()
+        val storage = devices.firstOrNull { device ->
+            device.deviceClass == UsbConstants.USB_CLASS_MASS_STORAGE ||
+                (0 until device.interfaceCount).any { device.getInterface(it).interfaceClass == UsbConstants.USB_CLASS_MASS_STORAGE }
+        } ?: devices.firstOrNull()
+        val fromUsb = storage?.let { runCatching { DeviceName.of(it.manufacturerName, it.productName) }.getOrNull() }
+        if (fromUsb != null) return fromUsb
+        return context.getSystemService(StorageManager::class.java)?.storageVolumes
+            ?.firstOrNull { it.isRemovable && it.state == Environment.MEDIA_MOUNTED }
+            ?.let { runCatching { it.getDescription(context) }.getOrNull() }
+            ?.takeIf { it.isNotBlank() }
     }
 
     private fun kindOf(name: String): MediaKind? {

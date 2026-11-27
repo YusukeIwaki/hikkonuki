@@ -33,6 +33,8 @@ data class LibrarySnapshot(
     val items: List<MediaItem>,
     /** Folders the user has granted; watched for the camera coming back. */
     val watchedFolders: List<String> = emptyList(),
+    /** What the attached camera calls itself, when it says. */
+    val deviceName: String? = null,
 )
 
 /** What the screens need from the camera side. Implemented over USB storage on a device. */

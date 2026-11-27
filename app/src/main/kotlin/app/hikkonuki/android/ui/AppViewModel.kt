@@ -28,6 +28,8 @@ data class BrowserUiState(
     /** Granted camera folders; watched for the camera coming back. */
     val watchedFolders: List<String> = emptyList(),
     val folderPermissionError: Boolean = false,
+    /** The attached camera's name; null while nothing is attached or it has none. */
+    val deviceName: String? = null,
 ) {
     val selectionMode: Boolean get() = selectedIds.isNotEmpty()
     val selectedItems: List<MediaItem> get() = items.filter { it.id in selectedIds }
@@ -81,6 +83,7 @@ class AppViewModel(private val library: MediaLibrary, private val exports: Expor
                         // Selections for media that vanished (cable pulled) must not linger.
                         selectedIds = it.selectedIds intersect ids,
                         watchedFolders = snapshot.watchedFolders,
+                        deviceName = snapshot.deviceName.takeIf { snapshot.connected },
                     )
                 }
                 initialLoadDone = true

@@ -4,11 +4,17 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.asPaddingValues
+import androidx.compose.foundation.layout.statusBars
+import androidx.compose.foundation.layout.windowInsetsTopHeight
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -18,7 +24,9 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items as gridItems
+import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -42,8 +50,12 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
+import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -51,8 +63,17 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import kotlin.math.roundToInt
 
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
@@ -73,10 +94,47 @@ fun BrowserScreen(
     // Back in selection mode only exits selection; it must not pop the browser destination.
     BackHandler(enabled = state.selectionMode) { onClearSelection() }
 
+    // With many photos the list is the screen: thumbnails run edge to edge behind the
+    // status and navigation bars, the app bar is a translucent layer over them, and it
+    // scrolls away with them and returns on the first scroll up.
+    val showingMedia = !state.loading && state.usbConnected && state.items.isNotEmpty()
+    val gridState = rememberLazyGridState()
+    val listState = rememberLazyListState()
+    val barHeightPx = with(LocalDensity.current) { TopAppBarDefaults.TopAppBarExpandedHeight.toPx() }
+    val bar = remember(barHeightPx) { ListDrivenBar(barHeightPx) }
+    // Safety net for everything that moves the list without a scroll gesture (fewer items
+    // after a rescan, switching layout, leaving selection mode): at the top of the list
+    // the bar is shown, always. A hidden bar must never be out of reach.
+    LaunchedEffect(state.layout, showingMedia) {
+        snapshotFlow {
+            !showingMedia || if (state.layout == BrowserLayout.GRID) !gridState.canScrollBackward else !listState.canScrollBackward
+        }.collect { atTop -> if (atTop) bar.offset = 0f }
+    }
+    val barColor = MaterialTheme.colorScheme.surface.copy(alpha = if (showingMedia) 0.88f else 1f)
+    val barColors = TopAppBarDefaults.topAppBarColors(containerColor = barColor, scrolledContainerColor = barColor)
+    // Selection mode pins its bar: what is selected, and the way out, stay in view.
+    val hidden = if (showingMedia && !state.selectionMode) -bar.offset else 0f
+
     Scaffold(
+        modifier = Modifier.nestedScroll(bar.nestedScrollConnection),
         topBar = {
+          Column {
+            // The strip behind the status bar stays, so the clock and icons remain readable
+            // over photos once the bar itself has scrolled away.
+            Spacer(Modifier.fillMaxWidth().windowInsetsTopHeight(WindowInsets.statusBars).background(barColor))
+            // The bar slides up out of this box by exactly the distance the list scrolled.
+            Box(
+                Modifier.clipToBounds().layout { measurable, constraints ->
+                    val placeable = measurable.measure(constraints)
+                    val visible = (placeable.height - hidden).roundToInt().coerceIn(0, placeable.height)
+                    layout(placeable.width, visible) { placeable.place(0, visible - placeable.height) }
+                },
+            ) {
             if (state.selectionMode) {
+                // Pinned: what is selected, and the way out, stay in view while scrolling.
                 TopAppBar(
+                    colors = barColors,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
                     title = { Text("${state.selectedIds.size}件を選択中") },
                     navigationIcon = {
                         IconButton(onClick = onClearSelection, modifier = Modifier.testTag("clearSelection")) {
@@ -93,7 +151,10 @@ fun BrowserScreen(
             } else {
                 var menuExpanded by remember { mutableStateOf(false) }
                 TopAppBar(
-                    title = { Text("Hikkonuki") },
+                    colors = barColors,
+                    windowInsets = WindowInsets(0, 0, 0, 0),
+                    // The camera's own name while one is attached, the app's otherwise.
+                    title = { Text(state.deviceName ?: "Hikkonuki", maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     actions = {
                         IconButton(onClick = onToggleLayout, modifier = Modifier.testTag("layoutToggle")) {
                             Icon(
@@ -121,6 +182,8 @@ fun BrowserScreen(
                     },
                 )
             }
+            }
+          }
         },
         floatingActionButton = {
             if (state.selectionMode) {
@@ -133,7 +196,18 @@ fun BrowserScreen(
             }
         },
     ) { padding ->
-        Box(modifier = Modifier.fillMaxSize().padding(padding)) {
+        // The media list fills the whole window and pads its content instead, so rows
+        // scroll under the bars. The top padding is the bar's full height, not the
+        // Scaffold's live value, which shrinks as the bar slides away and would make
+        // the list jump.
+        val listPadding = PaddingValues(
+            start = 4.dp,
+            end = 4.dp,
+            top = WindowInsets.statusBars.asPaddingValues().calculateTopPadding() + TopAppBarDefaults.TopAppBarExpandedHeight + 4.dp,
+            // Room for the export button so it never covers the last row.
+            bottom = padding.calculateBottomPadding() + if (state.selectionMode) 88.dp else 4.dp,
+        )
+        Box(modifier = Modifier.fillMaxSize().then(if (showingMedia) Modifier else Modifier.padding(padding))) {
             when {
                 state.loading -> CircularProgressIndicator(modifier = Modifier.align(Alignment.Center).testTag("loading"))
                 !state.usbConnected -> UsbDisconnectedPlaceholder()
@@ -168,7 +242,8 @@ fun BrowserScreen(
                 state.layout == BrowserLayout.GRID -> LazyVerticalGrid(
                     columns = GridCells.Fixed(3),
                     modifier = Modifier.fillMaxSize().testTag("mediaGrid"),
-                    contentPadding = PaddingValues(4.dp),
+                    state = gridState,
+                    contentPadding = listPadding,
                     horizontalArrangement = Arrangement.spacedBy(4.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                 ) {
@@ -221,7 +296,11 @@ fun BrowserScreen(
                         }
                     }
                 }
-                else -> LazyColumn(modifier = Modifier.fillMaxSize().testTag("mediaList")) {
+                else -> LazyColumn(
+                    modifier = Modifier.fillMaxSize().testTag("mediaList"),
+                    state = listState,
+                    contentPadding = PaddingValues(top = listPadding.calculateTopPadding(), bottom = listPadding.calculateBottomPadding()),
+                ) {
                     items(state.items, key = { it.id }) { item ->
                         val selected = item.id in state.selectedIds
                         ListItem(
@@ -242,6 +321,28 @@ fun BrowserScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+/**
+ * How far the app bar has scrolled away, driven by the distance the list itself scrolled.
+ *
+ * Material's enterAlways behaviour takes the drag before the list sees it, so the bar gets
+ * a head start (it moves during the touch slop, and even when the list has nothing to
+ * scroll), and it moves its contents at half the speed of its edge. Here the bar is moved
+ * by scroll the list actually consumed, pixel for pixel, so it looks attached to the
+ * content. Two guarantees follow: a list that fits on screen never loses its bar, and a
+ * hidden bar always comes back when scrolling up.
+ */
+internal class ListDrivenBar(private val heightPx: Float) {
+    /** 0 when fully shown, -height when fully scrolled away. */
+    var offset by mutableFloatStateOf(0f)
+
+    val nestedScrollConnection = object : NestedScrollConnection {
+        override fun onPostScroll(consumed: Offset, available: Offset, source: NestedScrollSource): Offset {
+            offset = (offset + consumed.y).coerceIn(-heightPx, 0f)
+            return Offset.Zero
         }
     }
 }

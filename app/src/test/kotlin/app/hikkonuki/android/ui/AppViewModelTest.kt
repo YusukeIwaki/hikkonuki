@@ -55,6 +55,24 @@ class AppViewModelTest {
     }
 
     @Test
+    fun cameraNameIsShownOnlyWhileItIsAttached() = runTest(dispatcher) {
+        library.snapshot = LibrarySnapshot(true, listOf(video), deviceName = "DJI OsmoPocket4P")
+        val viewModel = AppViewModel(library, exports)
+        advanceUntilIdle()
+        assertEquals("DJI OsmoPocket4P", viewModel.state.value.deviceName)
+        // Swapped for the other camera.
+        library.snapshot = LibrarySnapshot(true, listOf(other), deviceName = "Insta360 Ace Pro 2")
+        viewModel.onUsbChanged()
+        advanceUntilIdle()
+        assertEquals("Insta360 Ace Pro 2", viewModel.state.value.deviceName)
+        // Unplugged: a name left over from the last scan must not linger.
+        library.snapshot = LibrarySnapshot(false, emptyList(), deviceName = "Insta360 Ace Pro 2")
+        viewModel.onUsbChanged()
+        advanceUntilIdle()
+        assertEquals(null, viewModel.state.value.deviceName)
+    }
+
+    @Test
     fun selectionModeEndsWhenTheLastItemIsDeselected() = runTest(dispatcher) {
         connected(video, photo, other)
         val viewModel = AppViewModel(library, exports)

@@ -2,6 +2,10 @@ package app.hikkonuki.android.ui
 
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
+import androidx.compose.ui.test.assertIsNotDisplayed
+import androidx.compose.ui.test.performScrollToIndex
+import androidx.compose.ui.test.swipeDown
+import androidx.compose.ui.test.swipeUp
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.longClick
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -61,6 +65,22 @@ class ScreensTest {
     }
 
     @Test
+    fun titleIsTheCameraNameWhileOneIsAttached() {
+        val holder = liveBrowser(loaded(video, photo).copy(deviceName = "DJI OsmoPocket4P"))
+        compose.onNodeWithText("DJI OsmoPocket4P").assertIsDisplayed()
+        compose.onAllNodesWithText("Hikkonuki").assertCountEquals(0)
+        // A camera that does not name itself, and no camera at all, show the app name.
+        holder.value = loaded(video, photo)
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        holder.value = BrowserUiState(usbConnected = false, loading = false)
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        // The selection bar keeps its own title.
+        holder.value = loaded(video, photo).copy(deviceName = "DJI OsmoPocket4P", selectedIds = setOf(video.id))
+        compose.onNodeWithText("1件を選択中").assertIsDisplayed()
+        compose.onAllNodesWithText("DJI OsmoPocket4P").assertCountEquals(0)
+    }
+
+    @Test
     fun firstConnectionAsksForTheCameraFolder() {
         browser(BrowserUiState(usbConnected = true, loading = false, folderPermissionError = true))
         compose.onNodeWithText("写真や動画が見つかりませんでした").assertIsDisplayed()
@@ -109,6 +129,168 @@ class ScreensTest {
         compose.onNodeWithTag("exportSelectedFab").performClick()
         compose.onNodeWithTag("clearSelection").performClick()
         assertEquals(listOf("toggle ${photo.displayName}", "all", "export", "clear"), events)
+    }
+
+    private val many = (1..90).map { mediaItem(String.format("DJI_202611071134%02d_%04d_D.JPG", it % 60, it)) }
+
+    @Test
+    fun appBarSlidesAwayWhileScrollingDownAndReturnsOnScrollingUp() {
+        browser(loaded(*many.toTypedArray()))
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeUp() }
+        compose.onNodeWithText("Hikkonuki").assertIsNotDisplayed()
+        // Any scroll back up brings it back, without returning to the top of the list.
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeDown(startY = centerY, endY = centerY + 300f) }
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        compose.onAllNodesWithTag("mediaItem_${many.first().displayName}").assertCountEquals(0)
+    }
+
+    @Test
+    fun selectionBarStaysPutWhileScrolling() {
+        browser(loaded(*many.toTypedArray()).copy(selectedIds = setOf(many.first().id)))
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeUp() }
+        compose.onNodeWithText("1件を選択中").assertIsDisplayed()
+        compose.onNodeWithTag("selectAll").assertIsDisplayed()
+        compose.onNodeWithTag("exportSelectedFab").assertIsDisplayed()
+    }
+
+    @Test
+    fun lastRowCanBeScrolledClearOfTheExportButton() {
+        browser(loaded(*many.toTypedArray()).copy(selectedIds = setOf(many.first().id)))
+        compose.onNodeWithTag("mediaGrid").performScrollToIndex(many.lastIndex)
+        val last = compose.onNodeWithTag("mediaItem_${many.last().displayName}").fetchSemanticsNode().boundsInRoot
+        val button = compose.onNodeWithTag("exportSelectedFab").fetchSemanticsNode().boundsInRoot
+        assertTrue("last row bottom ${last.bottom} vs button top ${button.top}", last.bottom <= button.top)
+    }
+
+    /** A browser whose state can be swapped while it is on screen. */
+    private fun liveBrowser(initial: BrowserUiState): androidx.compose.runtime.MutableState<BrowserUiState> {
+        val holder = androidx.compose.runtime.mutableStateOf(initial)
+        compose.setContent {
+            HikkonukiTheme {
+                BrowserScreen(
+                    state = holder.value, onRefresh = {}, onToggleLayout = {}, onItemClick = {}, onItemLongClick = {},
+                    onToggleSelection = {}, onClearSelection = {}, onSelectAll = {}, onExportSelected = {}, onOpenExports = {}, onPickFolder = {},
+                )
+            }
+        }
+        return holder
+    }
+
+    private fun items(count: Int) = many.take(count)
+    private fun tagOf(layout: BrowserLayout) = if (layout == BrowserLayout.GRID) "mediaGrid" else "mediaList"
+
+    @Test
+    fun listLayoutAlsoHidesTheBarOnScroll() {
+        browser(loaded(*many.toTypedArray()).copy(layout = BrowserLayout.LIST))
+        compose.onNodeWithTag("mediaList").performTouchInput { swipeUp() }
+        compose.onNodeWithText("Hikkonuki").assertIsNotDisplayed()
+        compose.onNodeWithTag("mediaList").performTouchInput { swipeDown(startY = centerY, endY = centerY + 300f) }
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+    }
+
+    @Test
+    fun barMovesExactlyAsFarAsTheContentDoes() {
+        // No head start from the touch slop and no lag: after any drag the bar has moved
+        // by the same number of pixels as the first row (until it is fully hidden).
+        val holder = liveBrowser(BrowserUiState(usbConnected = false, loading = false))
+        for (layout in BrowserLayout.entries) {
+            holder.value = loaded(*many.toTypedArray()).copy(layout = layout)
+            val first = "mediaItem_${many.first().displayName}"
+            fun rowTop() = compose.onNodeWithTag(first).fetchSemanticsNode().boundsInRoot.top
+            // The button inside the bar, not just the bar's edge: its contents move with it.
+            fun barBottom() = compose.onNodeWithTag("layoutToggle").fetchSemanticsNode().positionInRoot.y
+            val rowStart = rowTop()
+            val barStart = barBottom()
+            for (drag in listOf(5f, 40f, 70f, 55f)) {
+                compose.onNodeWithTag(tagOf(layout)).performTouchInput { swipeUp(startY = centerY, endY = centerY - drag, durationMillis = 400) }
+                assertEquals("after dragging $drag in $layout", rowStart - rowTop(), barStart - barBottom(), 0.5f)
+            }
+            assertTrue("the list did move", rowStart - rowTop() > 10f)
+            holder.value = BrowserUiState(usbConnected = false, loading = false)
+            compose.waitForIdle()
+        }
+    }
+
+    @Test
+    fun aListThatFitsOnScreenNeverLosesItsBar() {
+        val holder = liveBrowser(BrowserUiState(usbConnected = false, loading = false))
+        for (layout in BrowserLayout.entries) {
+            for (count in listOf(1, 2, 3, 4, 6)) {
+                holder.value = loaded(*items(count).toTypedArray()).copy(layout = layout)
+                compose.onNodeWithTag(tagOf(layout)).performTouchInput { swipeUp() }
+                compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+                compose.onNodeWithTag(tagOf(layout)).performTouchInput { swipeDown() }
+                compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+            }
+            holder.value = BrowserUiState(usbConnected = false, loading = false)
+        }
+    }
+
+    @Test
+    fun atAnyItemCountTheBarIsBackOnceTheListIsAtTheTop() {
+        // Includes the awkward counts where the content is only a little taller than the
+        // screen, so the list can scroll by less than the height of the bar.
+        val holder = liveBrowser(BrowserUiState(usbConnected = false, loading = false))
+        for (layout in BrowserLayout.entries) {
+            for (count in (1..45) + listOf(60, 90)) {
+                holder.value = loaded(*items(count).toTypedArray()).copy(layout = layout)
+                val list = compose.onNodeWithTag(tagOf(layout))
+                list.performTouchInput { swipeUp() }
+                // Two long drags down are enough to reach the top from one drag up.
+                repeat(3) { list.performTouchInput { swipeDown() } }
+                compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+                compose.onNodeWithTag("mediaItem_${many.first().displayName}").assertIsDisplayed()
+                // And a short nudge up and back never strands it either.
+                list.performTouchInput { swipeUp(startY = centerY, endY = centerY - 40f) }
+                list.performTouchInput { swipeDown(startY = centerY, endY = centerY + 40f) }
+                compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+            }
+        }
+    }
+
+    @Test
+    fun barComesBackWhenTheListShrinksUnderIt() {
+        val holder = liveBrowser(BrowserUiState(usbConnected = false, loading = false))
+        for (layout in BrowserLayout.entries) {
+            holder.value = loaded(*many.toTypedArray()).copy(layout = layout)
+            compose.onNodeWithTag(tagOf(layout)).performTouchInput { swipeUp() }
+            compose.onNodeWithText("Hikkonuki").assertIsNotDisplayed()
+            // A rescan finds only three files left: no gesture could reveal the bar now.
+            holder.value = loaded(*items(3).toTypedArray()).copy(layout = layout)
+            compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+            // Unplugged, then plugged back in with the full card.
+            holder.value = BrowserUiState(usbConnected = false, loading = false)
+            compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+            holder.value = loaded(*many.toTypedArray()).copy(layout = layout)
+            compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        }
+    }
+
+    @Test
+    fun barIsShownAfterSwitchingLayoutOrLeavingSelectionWhileScrolled() {
+        val holder = liveBrowser(loaded(*many.toTypedArray()))
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeUp() }
+        compose.onNodeWithText("Hikkonuki").assertIsNotDisplayed()
+        // The other layout starts at its top.
+        holder.value = holder.value.copy(layout = BrowserLayout.LIST)
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+        compose.onNodeWithTag("mediaList").performTouchInput { swipeUp() }
+        compose.onNodeWithText("Hikkonuki").assertIsNotDisplayed()
+        holder.value = holder.value.copy(layout = BrowserLayout.GRID)
+        // The grid is still where it was left, mid-list: hidden, and one scroll up away.
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeDown(startY = centerY, endY = centerY + 300f) }
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
+
+        // Selection mode pins its own bar; leaving it mid-list must not strand the normal one.
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeUp() }
+        holder.value = holder.value.copy(selectedIds = setOf(many[40].id))
+        compose.onNodeWithText("1件を選択中").assertIsDisplayed()
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeUp() }
+        compose.onNodeWithText("1件を選択中").assertIsDisplayed()
+        holder.value = holder.value.copy(selectedIds = emptySet())
+        compose.onNodeWithTag("mediaGrid").performTouchInput { swipeDown(startY = centerY, endY = centerY + 300f) }
+        compose.onNodeWithText("Hikkonuki").assertIsDisplayed()
     }
 
     @Test
