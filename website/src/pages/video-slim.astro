@@ -1,0 +1,36 @@
+---
+import Layout from "../layouts/Layout.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+---
+
+<Layout lang="en" path="video-slim/" title="2K conversion">
+  <h1>2K conversion</h1>
+  <p class="lead">A 4K clip runs to gigabytes. That is fine on an SD card and useless in a chat. Hikkonuki scales video down to 2K, which still looks sharp on a phone or a laptop, and re-encodes it at a bitrate that suits the result.</p>
+
+  <h2>The rules</h2>
+  <table class="spec">
+    <tr><th>Resolution</th><td>Long edge capped at 2560, aspect ratio kept. Nothing is upscaled: a 1080p clip stays 1080p.</td></tr>
+    <tr><th>Codec</th><td>HEVC, on the phone's hardware encoder. 10-bit sources stay 10-bit (Main10) when the encoder supports it.</td></tr>
+    <tr><th>Scaling</th><td>Lanczos-3 on the GPU, in two passes.</td></tr>
+    <tr><th>Colour</th><td>Full-range and limited-range video are told apart and converted explicitly, on phones whose GPU allows it. Action cameras often record full range, and treating it as limited washes the picture out.</td></tr>
+    <tr><th>Bitrate</th><td>8 Mbps at 1080p30 and 12 Mbps at 1440p30, which is about 90 MB a minute. Gimbal camera footage with a lot of detail gets more, up to four times, following the bitrate of the source.</td></tr>
+    <tr><th>Audio</th><td>Copied as it is, not re-encoded.</td></tr>
+    <tr><th>Capture date</th><td>Written into the file together with the camera make and model.</td></tr>
+  </table>
+  <p class="note">The settings started as an ffmpeg workflow tuned on a Mac for each camera, and were then ported to run on the phone.</p>
+
+  <h2>When a clip is not converted</h2>
+  <ul class="plain">
+    <li>HDR and Log footage. Converting it would mean guessing at the colour.</li>
+    <li>Clips that would not shrink by at least 20%.</li>
+    <li>Clips that fail to convert.</li>
+  </ul>
+  <p>In each case the original file is imported instead, so an export never leaves you without the clip.</p>
+
+  <h2>Photos</h2>
+  <p>Photos are not converted. The file from the camera is copied as it is.</p>
+
+  <div class="next">
+    <p><strong>Next:</strong> <a href={`${base}export/`}>Export</a>, and how it runs in the background.</p>
+  </div>
+</Layout>

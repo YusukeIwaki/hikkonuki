@@ -1,0 +1,42 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DeviceFrame from "../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+---
+
+<Layout lang="en" path="export/" title="Export">
+  <h1>Export</h1>
+  <p class="lead">Converting video takes a while. You should not have to hold the phone and watch, so the work runs in a background service and the screen only shows how far it has got.</p>
+
+  <div class="cols">
+    <div>
+      <h2>Starting one</h2>
+      <table class="spec">
+        <tr><th>One item</th><td>Open it and choose "Export" from the menu.</td></tr>
+        <tr><th>Several</th><td>Long-press in the list, select what you want, and press "Export".</td></tr>
+        <tr><th>Progress</th><td>"Export status" in the list's menu, or the notification.</td></tr>
+      </table>
+
+      <h2>It keeps going</h2>
+      <p>Files are processed one at a time. Close the app or open another one and the export carries on. If Android kills the app while the camera is still attached, the next start picks up where it stopped.</p>
+
+      <h2>Where the files go</h2>
+      <p><code>DCIM/Hikkonuki</code> on the phone. The gallery shows them, the share sheet can send them, and Google Photos backs them up if you have backup turned on. Hikkonuki itself never touches your Google account.</p>
+      <p>A file only appears there once it is complete. Half-written files are not visible to other apps.</p>
+
+      <h2>Cancelling</h2>
+      <p>Each waiting or running file has a cancel button, and the notification has one too. A cancelled file leaves nothing behind.</p>
+
+      <h2>If the cable comes out</h2>
+      <p>The file in progress and everything still waiting are marked as failed, and the export ends with a count: "2 of 4 files exported, 2 failed". Plug the camera back in and export the same selection again. Files that already made it are skipped.</p>
+    </div>
+    <div>
+      <DeviceFrame src={`${base}shots/en/15_exports_running.webp`} alt="Export status with finished, running and waiting files" caption="An export in progress. Finished rows show the output size." />
+      <DeviceFrame src={`${base}shots/en/17_exports_result_all_succeeded.webp`} alt="Export result" caption="When everything is done, only the result is kept." />
+    </div>
+  </div>
+
+  <div class="next">
+    <p><strong>See also:</strong> <a href={`${base}video-slim/`}>2K conversion</a>, for what the export does to your video.</p>
+  </div>
+</Layout>

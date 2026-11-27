@@ -1,0 +1,43 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import DeviceFrame from "../../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const root = `${base}ja/`;
+---
+
+<Layout lang="ja" path="export/" title="エクスポート">
+  <h1>エクスポート</h1>
+  <p class="lead">動画の変換には時間がかかります。そのあいだスマートフォンを握って眺めている必要はありません。処理は裏側のサービスが進め、画面は進み具合を見せるだけです。</p>
+
+  <div class="cols">
+    <div>
+      <h2>はじめ方</h2>
+      <table class="spec">
+        <tr><th>1件だけ</th><td>詳細画面を開き、メニューから「エクスポート」。</td></tr>
+        <tr><th>まとめて</th><td>一覧で長押しして選び、「エクスポート」ボタン。</td></tr>
+        <tr><th>進み具合</th><td>一覧のメニューにある「エクスポート状況」、または通知。</td></tr>
+      </table>
+
+      <h2>閉じても続く</h2>
+      <p>ファイルは1件ずつ処理します。アプリを閉じても、ほかのアプリを開いても止まりません。カメラがつながったままアプリが終了させられた場合は、次に開いたときに続きから再開します。</p>
+
+      <h2>保存先</h2>
+      <p>スマートフォンの <code>DCIM/Hikkonuki</code> です。ギャラリーに出て、共有メニューから送れて、バックアップを有効にしていればGoogleフォトにも上がります。Hikkonuki自身がGoogleアカウントに触ることはありません。</p>
+      <p>ファイルが見えるようになるのは、書き終わってからです。書きかけのファイルはほかのアプリから見えません。</p>
+
+      <h2>キャンセル</h2>
+      <p>待機中・処理中のファイルは、1件ずつキャンセルできます。通知からでも止められます。キャンセルしたファイルは何も残しません。</p>
+
+      <h2>途中でケーブルが抜けたら</h2>
+      <p>処理中のファイルと、待っていたファイルをまとめて失敗にして終わります。結果は「4件中 2件成功、2件失敗」のように残ります。つなぎ直して同じものをもう一度エクスポートすれば、取り込み済みのファイルは飛ばします。</p>
+    </div>
+    <div>
+      <DeviceFrame src={`${base}shots/ja/15_exports_running.webp`} alt="完了・処理中・待機中のファイルが並ぶエクスポート状況" caption="エクスポート中。終わった行には出力後のサイズが出ます。" />
+      <DeviceFrame src={`${base}shots/ja/17_exports_result_all_succeeded.webp`} alt="エクスポート結果" caption="すべて終わると、結果だけが残ります。" />
+    </div>
+  </div>
+
+  <div class="next">
+    <p><strong>あわせて読む:</strong> <a href={`${root}video-slim/`}>2K変換</a>。エクスポートで動画に何をしているか。</p>
+  </div>
+</Layout>

@@ -1,0 +1,41 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DeviceFrame from "../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+---
+
+<Layout lang="en" path="">
+  <div class="cols">
+    <div>
+      <h1>Pull footage off your camera over USB. Share it at 2K.</h1>
+      <p class="lead">
+        4K clips are too big to send to anyone, and they fill up Google Photos fast.
+        Hikkonuki copies photos and videos from a gimbal camera or an action camera over a USB cable,
+        converts the video to 2K on the phone, and saves it to the gallery.
+        Share it from there, or let Google Photos back it up.
+      </p>
+      <p class="lead">
+        That is the whole app. No ads, no account, no feed, no editor.
+        It doesn't even have permission to use the internet.
+      </p>
+      <p><a class="btn" href={`${base}usb-import/`}>How it works</a></p>
+
+      <h2>What it does</h2>
+      <ul class="plain">
+        <li><a href={`${base}usb-import/`}>USB import</a>: plug the camera in and its photos and videos are listed. It reads the camera as USB storage, over the cable.</li>
+        <li><a href={`${base}browse/`}>Browse</a>: grid or list, long-press to select several, swipe through the details.</li>
+        <li><a href={`${base}video-slim/`}>2K conversion</a>: 4K video is scaled to a long edge of 2560 and re-encoded as HEVC. 10-bit stays 10-bit where the phone can encode it.</li>
+        <li><a href={`${base}export/`}>Export</a>: keeps going after you leave the app, and copes with the cable being pulled halfway.</li>
+      </ul>
+
+      <h2>Three steps</h2>
+      <table class="spec">
+        <tr><th>1. Plug in</th><td>Connect the camera to the phone with a USB-C cable. The app opens on the camera's photos and videos.</td></tr>
+        <tr><th>2. Pick</th><td>Tap one to look at it, or long-press to select as many as you want.</td></tr>
+        <tr><th>3. Export</th><td>Photos are copied as they are. Videos are converted to 2K. Both land in <code>DCIM/Hikkonuki</code>, where the gallery and Google Photos see them.</td></tr>
+      </table>
+      <p class="note">The name is from the Japanese <i lang="ja">hikkonuku</i>, to yank something out.</p>
+    </div>
+    <DeviceFrame src={`${base}shots/en/08_selection.webp`} alt="Three items selected in the grid, with an Export button" caption="Select what you want and export. Videos show their length." />
+  </div>
+</Layout>

@@ -1,0 +1,37 @@
+---
+import Layout from "../../layouts/Layout.astro";
+import DeviceFrame from "../../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const root = `${base}ja/`;
+---
+
+<Layout lang="ja" path="browse/" title="写真・動画を見る">
+  <h1>写真・動画を見る</h1>
+  <p class="lead">カメラの中身を確かめて、持っていくものを選ぶための画面です。アルバムもタグも編集もありません。見て、選んで、エクスポートします。</p>
+
+  <div class="cols">
+    <div>
+      <h2>グリッドとリスト</h2>
+      <p>上のボタンでグリッドとリストを切り替えます。リストにはサムネイル、ファイル名、サイズ、撮影日時が並ぶので、名前で探したいときや、どれが重いのか知りたいときに向いています。</p>
+
+      <h2>選ぶ</h2>
+      <ul class="plain">
+        <li>長押しで選択が始まり、あとはタップで足していけます。</li>
+        <li>「すべて選択」でカメラの中身を丸ごと選べます。</li>
+        <li>上のバーに件数が出ます。エクスポートボタンを押せば、選んだ分が処理に回ります。</li>
+        <li>選択中に戻る操作をすると、まず選択だけが外れます。</li>
+      </ul>
+
+      <h2>詳細</h2>
+      <p>タップすると1件を大きく表示し、左右のスワイプで前後に移れます。下にはファイル名、撮影日時、ファイルサイズ、解像度、長さ、形式が出ます。メニューから、その1件だけをエクスポートできます。</p>
+    </div>
+    <div>
+      <DeviceFrame src={`${base}shots/ja/06_list.webp`} alt="リスト表示" caption="リスト表示。ファイル名、サイズ、撮影日時。" />
+      <DeviceFrame src={`${base}shots/ja/09_detail_photo.webp`} alt="写真の詳細画面" caption="詳細画面。スワイプで次へ。" />
+    </div>
+  </div>
+
+  <div class="next">
+    <p><strong>次に読む:</strong> <a href={`${root}export/`}>エクスポート</a>。ボタンを押したあとに起きること。</p>
+  </div>
+</Layout>

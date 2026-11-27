@@ -1,0 +1,36 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DeviceFrame from "../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+---
+
+<Layout lang="en" path="browse/" title="Browse">
+  <h1>Browse</h1>
+  <p class="lead">A screen for checking what is on the camera and choosing what to take. There are no albums, tags or edits here. You look, you pick, you export.</p>
+
+  <div class="cols">
+    <div>
+      <h2>Grid and list</h2>
+      <p>The button at the top switches between a grid and a list. The list shows the thumbnail, file name, size and capture date, which helps when you are looking for one clip by name or want to know how big it is.</p>
+
+      <h2>Selecting</h2>
+      <ul class="plain">
+        <li>Long-press an item to start selecting, then tap the others.</li>
+        <li>"Select all" takes everything on the camera.</li>
+        <li>The top bar shows how many are selected. The Export button sends them off.</li>
+        <li>Going back while selecting clears the selection first.</li>
+      </ul>
+
+      <h2>Details</h2>
+      <p>Tap an item to open it, and swipe left or right to move through the rest. Underneath are the file name, capture date, file size, resolution, length and format. The menu exports just that one item.</p>
+    </div>
+    <div>
+      <DeviceFrame src={`${base}shots/en/06_list.webp`} alt="List view" caption="List view: file name, size and capture date." />
+      <DeviceFrame src={`${base}shots/en/09_detail_photo.webp`} alt="Detail view of a photo" caption="Detail view. Swipe to move to the next one." />
+    </div>
+  </div>
+
+  <div class="next">
+    <p><strong>Next:</strong> <a href={`${base}export/`}>Export</a>, and what happens after you press the button.</p>
+  </div>
+</Layout>

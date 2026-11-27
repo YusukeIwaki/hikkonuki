@@ -1,0 +1,186 @@
+---
+interface Props {
+  lang: "en" | "ja";
+  /** Path of this page below the language root, e.g. "" or "browse/". */
+  path: string;
+  title?: string;
+  description?: string;
+}
+
+const text = {
+  en: {
+    description: "Pull photos and videos off a gimbal camera or action camera over USB, shrink 4K video to 2K on the phone, and share it.",
+    nav: [
+      ["usb-import/", "USB import"],
+      ["browse/", "Browse"],
+      ["video-slim/", "2K conversion"],
+      ["export/", "Export"],
+    ],
+    footer: "Hikkonuki is an Android app. Android 11 or later.",
+  },
+  ja: {
+    description: "ジンバルカメラやアクションカメラの写真・動画をUSBで取り込み、4K動画をスマートフォン上で2Kに変換してシェアするAndroidアプリ。",
+    nav: [
+      ["usb-import/", "USB取り込み"],
+      ["browse/", "写真・動画を見る"],
+      ["video-slim/", "2K変換"],
+      ["export/", "エクスポート"],
+    ],
+    footer: "HikkonukiはAndroidアプリです。Android 11以降で動きます。",
+  },
+};
+
+const { lang, path, title } = Astro.props;
+const t = text[lang];
+const description = Astro.props.description ?? t.description;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const roots = { en: base, ja: `${base}ja/` };
+const root = roots[lang];
+---
+
+<!doctype html>
+<html lang={lang}>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="description" content={description} />
+    <link rel="icon" type="image/svg+xml" href={`${base}favicon.svg`} />
+    <link rel="icon" type="image/png" sizes="512x512" href={`${base}app-icon-512.png`} />
+    <link rel="alternate" hreflang="en" href={`${roots.en}${path}`} />
+    <link rel="alternate" hreflang="ja" href={`${roots.ja}${path}`} />
+    {lang === "en" && (
+      <script is:inline define:vars={{ jaUrl: `${roots.ja}${path}` }}>
+        // English is the default. A visitor whose browser prefers Japanese is sent to the
+        // Japanese page, unless they have picked a language with the switch before.
+        try {
+          if (!localStorage.getItem("lang")) {
+            const preferred = (navigator.languages || [navigator.language || ""])
+              .map((l) => l.toLowerCase().split("-")[0])
+              .find((l) => l === "en" || l === "ja");
+            if (preferred === "ja") location.replace(jaUrl + location.hash);
+          }
+        } catch {}
+      </script>
+    )}
+    <title>{title ? `${title} | Hikkonuki` : "Hikkonuki"}</title>
+    <style is:global>
+      :root {
+        --ink: #191c1e;
+        --sub: #4c545a;
+        --line: #d9dde0;
+        --accent: #0b6e69;
+        --accent-ink: #095550;
+        --paper: #ffffff;
+        --wash: #eef1f2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        color: var(--ink);
+        background: var(--paper);
+        font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", sans-serif;
+        line-height: 1.65;
+      }
+      html[lang="ja"] body {
+        font-family: "Hiragino Kaku Gothic ProN", "Hiragino Sans", "Noto Sans JP", "Yu Gothic UI", sans-serif;
+        line-height: 1.75;
+      }
+      a { color: var(--accent-ink); }
+      code { font-size: .92em; background: var(--wash); padding: 1px 5px; }
+      header.site {
+        border-bottom: 1px solid var(--line);
+        position: sticky;
+        top: 0;
+        background: var(--paper);
+        z-index: 10;
+      }
+      .bar {
+        max-width: 1080px;
+        margin: 0 auto;
+        padding: 14px 20px;
+        display: flex;
+        align-items: center;
+        gap: 12px 28px;
+        flex-wrap: wrap;
+      }
+      .brand {
+        display: inline-flex;
+        align-items: center;
+        gap: 9px;
+        font-weight: 700;
+        font-size: 1.05rem;
+        color: var(--ink);
+        text-decoration: none;
+        letter-spacing: .01em;
+      }
+      .brand img { width: 26px; height: 26px; border-radius: 6px; display: block; }
+      nav.main { display: flex; gap: 6px 18px; flex-wrap: wrap; font-size: .92rem; }
+      nav.main a { color: var(--sub); text-decoration: none; }
+      nav.main a:hover { color: var(--ink); text-decoration: underline; }
+      nav.main a[aria-current="page"] { color: var(--ink); font-weight: 600; }
+      .langs { margin-left: auto; display: flex; gap: 12px; font-size: .88rem; }
+      .langs a { color: var(--sub); text-decoration: none; }
+      .langs a:hover { text-decoration: underline; }
+      .langs a[aria-current="true"] { color: var(--ink); font-weight: 600; }
+      main { max-width: 1080px; margin: 0 auto; padding: 40px 20px 72px; }
+      h1 { font-size: 2rem; line-height: 1.3; margin: 0 0 16px; font-weight: 700; text-wrap: balance; }
+      h2 { font-size: 1.3rem; margin: 44px 0 12px; padding-top: 20px; border-top: 1px solid var(--line); }
+      h2:first-of-type { border-top: 0; padding-top: 0; }
+      p.lead { font-size: 1.08rem; color: var(--sub); max-width: 44em; }
+      .cols { display: grid; grid-template-columns: 1.2fr .8fr; gap: 36px; align-items: start; }
+      .cols > * { min-width: 0; }
+      @media (max-width: 760px) { .cols { grid-template-columns: 1fr; } h1 { font-size: 1.6rem; } }
+      figcaption { font-size: .85rem; color: var(--sub); margin-top: 8px; }
+      table.spec { border-collapse: collapse; width: 100%; font-size: .94rem; }
+      table.spec th, table.spec td { border: 1px solid var(--line); padding: 8px 10px; text-align: left; vertical-align: top; }
+      table.spec th { background: var(--wash); font-weight: 600; width: 28%; }
+      ul.plain { padding-left: 1.2em; }
+      ul.plain li { margin: 4px 0; }
+      .next { margin-top: 48px; padding: 18px 20px; background: var(--wash); }
+      .next p { margin: 4px 0; }
+      footer.site { border-top: 1px solid var(--line); }
+      footer.site .bar { color: var(--sub); font-size: .88rem; }
+      .btn {
+        display: inline-block;
+        background: var(--accent);
+        color: #fff;
+        text-decoration: none;
+        padding: 10px 18px;
+        font-weight: 600;
+      }
+      .note { font-size: .9rem; color: var(--sub); }
+    </style>
+  </head>
+  <body>
+    <header class="site">
+      <div class="bar">
+        <a class="brand" href={root}><img src={`${base}favicon.svg`} alt="" />Hikkonuki</a>
+        <nav class="main">
+          {t.nav.map(([href, label]) => (
+            <a href={`${root}${href}`} aria-current={href === path ? "page" : undefined}>{label}</a>
+          ))}
+        </nav>
+        <div class="langs">
+          <a href={`${roots.en}${path}`} data-lang="en" lang="en" hreflang="en" aria-current={lang === "en" ? "true" : undefined}>English</a>
+          <a href={`${roots.ja}${path}`} data-lang="ja" lang="ja" hreflang="ja" aria-current={lang === "ja" ? "true" : undefined}>日本語</a>
+        </div>
+      </div>
+    </header>
+    <main>
+      <slot />
+    </main>
+    <footer class="site">
+      <div class="bar">
+        <span>{t.footer}</span>
+      </div>
+    </footer>
+    <script is:inline>
+      // Remember an explicit choice so the language redirect does not override it.
+      for (const a of document.querySelectorAll(".langs a")) {
+        a.addEventListener("click", () => {
+          try { localStorage.setItem("lang", a.dataset.lang); } catch {}
+        });
+      }
+    </script>
+  </body>
+</html>

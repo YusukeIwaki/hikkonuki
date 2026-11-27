@@ -1,0 +1,39 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DeviceFrame from "../components/DeviceFrame.astro";
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+---
+
+<Layout lang="en" path="usb-import/" title="USB import">
+  <h1>USB import</h1>
+  <p class="lead">Connected over USB, the camera shows up as storage, like a memory stick. Hikkonuki reads the photos and videos straight off it. There is no Wi-Fi pairing and no camera account.</p>
+
+  <div class="cols">
+    <div>
+      <h2>Plugging in</h2>
+      <p>With nothing connected, the screen says "Connect a camera via USB" and nothing else. Plug the camera in and the app opens on its media list. Pull the cable and the waiting screen comes back.</p>
+
+      <h2>The first time</h2>
+      <p>Android asks you to choose the camera's <code>DCIM</code> folder in the system folder picker. The choice is remembered per SD card, so a second camera also asks only once. The app uses no storage permission.</p>
+
+      <h2>How it reads</h2>
+      <table class="spec">
+        <tr><th>Detection</th><td>Any USB mass storage device. The title of the list is the camera's own product name.</td></tr>
+        <tr><th>Listing</th><td>Photos and videos under the folder you chose, newest first.</td></tr>
+        <tr><th>Originals</th><td>The folder is opened read-only. Nothing on the camera is changed or deleted.</td></tr>
+      </table>
+
+      <h2>Capture date</h2>
+      <p>For video, the date stored in the file is compared with the timestamp in the file name. If they differ by a plausible time zone offset, the stored date is used and the difference is kept as the camera's time zone. If the stored date is unset, the file name is used.</p>
+      <p>The result is written into the exported file before it reaches the gallery, so Google Photos sorts the clip by when it was shot, not by when it was imported.</p>
+
+      <h2>Cameras</h2>
+      <p>Hikkonuki was built and tested with one pocket gimbal camera and one action camera. Other cameras that mount as USB storage are detected the same way, but have not been tested.</p>
+    </div>
+    <DeviceFrame src={`${base}shots/en/01_no_camera.webp`} alt="Waiting screen with no camera connected" caption="Nothing connected. Plugging a camera in switches to the list." />
+  </div>
+
+  <div class="next">
+    <p><strong>Next:</strong> <a href={`${base}video-slim/`}>2K conversion</a>, and what happens to the picture.</p>
+  </div>
+</Layout>
