@@ -38,11 +38,25 @@ class FakeSource : SourceAccess {
     val files = HashMap<String, ByteArray>()
     var plugged = true
     var failReads = false
+
+    /** Called before every chunk is read, e.g. to pull the cable in the middle of a copy. */
+    var onRead: (() -> Unit)? = null
+
     override fun exists(sourceId: String): Boolean = plugged && sourceId in files
+
     override fun open(sourceId: String): InputStream {
         if (!exists(sourceId)) throw FileNotFoundException(sourceId)
         if (failReads) throw IOException("read error")
-        return ByteArrayInputStream(files.getValue(sourceId))
+        val data = ByteArrayInputStream(files.getValue(sourceId))
+        // Like a real USB stream: reads fail from the moment the device is gone.
+        return object : InputStream() {
+            override fun read(): Int = throw UnsupportedOperationException()
+            override fun read(buffer: ByteArray, offset: Int, length: Int): Int {
+                onRead?.invoke()
+                if (!plugged) throw IOException("I/O error (device removed)")
+                return data.read(buffer, offset, minOf(length, 1024))
+            }
+        }
     }
 }
 
@@ -57,6 +71,12 @@ class FakeProber(private val source: FakeSource) : VideoProber {
 class FakeTranscoder(override val name: String = "fake", private val output: ByteArray) : VideoTranscoder {
     var durationMillis = 10_000L
     var failure: Exception? = null
+
+    /** When set, the decoder notices a vanished source at its next read, as a real one does. */
+    var source: FakeSource? = null
+
+    /** Runs right after a conversion's output is complete. */
+    var onDone: (() -> Unit)? = null
     val calls = ArrayList<Pair<String, TranscodeSpec>>()
 
     override suspend fun transcode(sourceId: String, spec: TranscodeSpec, output: File, onProgress: (Float) -> Unit): String {
@@ -64,10 +84,12 @@ class FakeTranscoder(override val name: String = "fake", private val output: Byt
         output.writeBytes(ByteArray(10))
         repeat(10) { step ->
             delay(durationMillis / 10)
+            if (source?.exists(sourceId) == false) throw IOException("extractor: I/O error")
             onProgress((step + 1) / 10f)
         }
         failure?.let { throw it }
         output.writeBytes(this.output)
+        onDone?.invoke()
         return "$name ${spec.width}x${spec.height}"
     }
 }

@@ -85,7 +85,8 @@ class FallbackTranscoder(private val candidates: List<VideoTranscoder>) : VideoT
  * It is built to always end up with the file imported:
  * - every state change is persisted, and [start] re-queues whatever a killed process left;
  * - output is written to a pending gallery entry, so a half-written file is never visible;
- * - unplugging the camera parks the affected jobs, and [sourcesAvailable] resumes them;
+ * - unplugging the camera fails the file in flight and every file still waiting, at once
+ *   and with one clear reason, leaving no partial output;
  * - a video that cannot be converted is imported as the original instead of failing.
  *
  * When the queue runs dry, a batch with nothing left to do is collapsed into its summary.
@@ -107,6 +108,9 @@ class ExportEngine(
     @Volatile
     private var running: Pair<Long, Job>? = null
 
+    /** Jobs that were running when the camera was reported gone. */
+    private val detached = ConcurrentHashMap.newKeySet<Long>()
+
     enum class Ending { COMPLETED, FAILED, CANCELLED }
 
     /** The job that most recently stopped being worked on, for "what just happened" notices. */
@@ -114,11 +118,23 @@ class ExportEngine(
     var lastEnded: Pair<ExportJob, Ending>? = null
         private set
 
-    /** Call once per process before the first [drain]. Returns true when there is work. */
+    /**
+     * Call once per process before the first [drain]. Returns true when there is work.
+     *
+     * A process that was killed mid-export (no detach broadcast involved) left a row marked
+     * as running. If the camera is still attached, that file goes back in line and the
+     * export simply continues. If the camera is gone by now, nobody was alive to hear the
+     * broadcast, so the disconnect is handled here: the rest of the batch fails with the
+     * "USB removed" reason and the batch is closed.
+     */
     fun start(): Boolean {
+        val interrupted = queue.jobs.value.filter { it.status == ExportStatus.RUNNING }
         queue.recover()
         runCatching { gallery.discardStale() }
-        // The process may have died between the last file finishing and the summary.
+        if (interrupted.any { !runCatching { source.exists(it.sourceId) }.getOrDefault(false) }) {
+            queue.failQueued(USB_REMOVED_MESSAGE)
+        }
+        // Also covers a process that died between the last file finishing and the summary.
         if (!queue.hasQueued()) queue.finalizeActiveBatch()
         return queue.hasQueued()
     }
@@ -128,10 +144,24 @@ class ExportEngine(
         return queue.hasQueued()
     }
 
-    /** The media list was (re)loaded: continue jobs that were waiting for these files. */
-    fun sourcesAvailable(available: List<ExportRequest>): Boolean {
-        queue.resumeWaiting(available)
-        return queue.hasQueued()
+    /**
+     * The system reported that the camera was detached or its storage unmounted.
+     *
+     * Waiting files are failed immediately, and the file in flight is stopped and failed
+     * with the same cause, so the batch ends as "N of M succeeded". This is decided by the
+     * report itself, not by whether the files are readable right now: after a momentary
+     * dropout the camera may already be back, and the export must still not carry on with
+     * a half-read file.
+     */
+    fun sourceDisconnected() {
+        queue.failQueued(USB_REMOVED_MESSAGE)
+        val current = running
+        if (current != null) {
+            detached += current.first
+            current.second.cancel()
+        } else {
+            queue.finalizeActiveBatch()
+        }
     }
 
     /** User cancellation: the job disappears, and a partially written file with it. */
@@ -172,8 +202,9 @@ class ExportEngine(
                     result = runCatching { process(job) { queue.setProgress(job.id, (it * 100).toInt().coerceIn(0, 99)) } }
                 }
                 running = job.id to work
-                // An open stream can keep delivering buffered data after the cable is pulled,
-                // so ask the source itself; two misses in a row count as gone.
+                // Detach broadcasts ([sourceDisconnected]) are the main signal, but they are not
+                // guaranteed, and an open stream can keep delivering buffered data after the
+                // cable is pulled. So also ask the source itself; two misses in a row count as gone.
                 val watchdog = launch {
                     var misses = 0
                     while (true) {
@@ -181,6 +212,7 @@ class ExportEngine(
                         misses = if (withContext(io) { source.exists(job.sourceId) }) 0 else misses + 1
                         if (misses >= 2) {
                             sourceLost = true
+                            queue.failQueued(USB_REMOVED_MESSAGE)
                             work.cancel()
                             break
                         }
@@ -197,6 +229,7 @@ class ExportEngine(
             running = null
         }
         val userCancelled = cancelRequested.remove(job.id)
+        val wasDetached = detached.remove(job.id)
         val ending = result!!.fold(
             onSuccess = { done ->
                 queue.complete(job.id, done.outcome, done.entry.uri, done.entry.sizeBytes, done.detail)
@@ -205,8 +238,13 @@ class ExportEngine(
             onFailure = { error ->
                 when {
                     userCancelled -> Ending.CANCELLED.also { queue.remove(job.id) }
-                    sourceLost || !runCatching { source.exists(job.sourceId) }.getOrDefault(false) ->
-                        Ending.FAILED.also { parkMissingSources(job) }
+                    // Which detector fired first must not change the outcome: a detach report,
+                    // the watchdog, or simply finding the source gone all mean "USB removed".
+                    wasDetached || sourceLost || !runCatching { source.exists(job.sourceId) }.getOrDefault(false) ->
+                        Ending.FAILED.also {
+                            queue.fail(job.id, USB_REMOVED_MESSAGE)
+                            queue.failQueued(USB_REMOVED_MESSAGE)
+                        }
                     error is CancellationException -> Ending.CANCELLED.also { queue.requeue(job.id) }
                     else -> Ending.FAILED.also {
                         queue.fail(job.id, error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName)
@@ -215,14 +253,6 @@ class ExportEngine(
             },
         )
         lastEnded = job to ending
-    }
-
-    /** One unplugged cable takes every file on that camera with it; don't fail them one by one. */
-    private fun parkMissingSources(lost: ExportJob) {
-        queue.waitForSource(lost.id)
-        queue.jobs.value
-            .filter { it.status == ExportStatus.QUEUED && !runCatching { source.exists(it.sourceId) }.getOrDefault(false) }
-            .forEach { queue.waitForSource(it.id) }
     }
 
     private class Done(val outcome: ExportOutcome, val entry: GalleryEntry, val detail: String?)
@@ -323,6 +353,8 @@ class ExportEngine(
     }
 
     companion object {
+        const val USB_REMOVED_MESSAGE = "USBが取り外されました。接続し直して再度エクスポートしてください。"
+
         /** Codec errors can run to a page of format dumps; the list only needs the gist. */
         internal fun shortReason(error: Throwable): String {
             val text = error.message?.lineSequence()?.firstOrNull()?.trim().orEmpty().ifEmpty { error.javaClass.simpleName }

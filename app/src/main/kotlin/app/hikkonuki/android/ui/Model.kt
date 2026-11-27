@@ -53,7 +53,6 @@ interface ExportController {
     /** Newest first. */
     val batches: StateFlow<List<ExportBatch>>
     fun export(requests: List<ExportRequest>)
-    fun sourcesAvailable(requests: List<ExportRequest>)
     fun resume()
     fun cancel(jobId: Long)
     fun clearHistory()

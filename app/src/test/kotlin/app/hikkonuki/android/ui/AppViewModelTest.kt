@@ -51,8 +51,6 @@ class AppViewModelTest {
         advanceUntilIdle()
         assertTrue(viewModel.state.value.usbConnected)
         assertEquals(listOf(video, photo), viewModel.state.value.items)
-        // Jobs parked by an earlier unplug get the chance to continue.
-        assertEquals(listOf(video.toRequest(), photo.toRequest()), exports.available.single())
     }
 
     @Test

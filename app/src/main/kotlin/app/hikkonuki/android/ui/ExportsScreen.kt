@@ -31,8 +31,8 @@ import app.hikkonuki.android.core.ExportStatus
 import app.hikkonuki.android.platform.MediaStoreGallery
 
 /**
- * Shows the latest export batch only: its rows while it is ACTIVE (running, queued, or
- * waiting for an unplugged camera), or its one-line summary once DONE. By then the rows
+ * Shows the latest export batch only: its rows while it is ACTIVE (running or queued),
+ * or its one-line summary once DONE. By then the rows
  * have been deleted and only the final result is kept.
  */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,12 +93,11 @@ fun ExportsScreen(
                                     if (job.status == ExportStatus.COMPLETED) {
                                         Text("${formatSize(job.outputSizeBytes)} ・ DCIM/${MediaStoreGallery.FOLDER}")
                                     }
-                                    if (job.status == ExportStatus.WAITING_FOR_SOURCE) Text(USB_REMOVED_MESSAGE)
                                     job.errorMessage?.let { if (it.isNotEmpty()) Text(it) }
                                 }
                             },
                             trailingContent = {
-                                if (job.status.isActive) {
+                                if (job.status == ExportStatus.QUEUED || job.status == ExportStatus.RUNNING) {
                                     IconButton(onClick = { onCancel(job.id) }, modifier = Modifier.testTag("cancelJob_${job.id}")) {
                                         Icon(Icons.Filled.Cancel, contentDescription = "キャンセル")
                                     }
@@ -118,13 +117,9 @@ fun ExportsScreen(
     }
 }
 
-/** Shown on rows parked by an unplugged camera; they continue by themselves once it is back. */
-internal const val USB_REMOVED_MESSAGE = "USBが取り外されました。接続し直すと再開します。"
-
 private fun statusText(job: ExportJob): String = when (job.status) {
     ExportStatus.QUEUED -> "待機中"
     ExportStatus.RUNNING -> "エクスポート中 ${job.progressPercent}%"
     ExportStatus.COMPLETED -> "完了"
     ExportStatus.FAILED -> "失敗"
-    ExportStatus.WAITING_FOR_SOURCE -> "待機中"
 }

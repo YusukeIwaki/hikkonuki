@@ -9,12 +9,10 @@ enum class MediaKind { PHOTO, VIDEO }
 enum class ExportStatus {
     QUEUED,
     RUNNING,
-    /** The camera was unplugged. Resumes by itself when the same file shows up again. */
-    WAITING_FOR_SOURCE,
     COMPLETED,
     FAILED;
 
-    val isActive: Boolean get() = this == QUEUED || this == RUNNING || this == WAITING_FOR_SOURCE
+    val isActive: Boolean get() = this == QUEUED || this == RUNNING
 }
 
 enum class ExportOutcome { CONVERTED, ORIGINAL, COPIED, ALREADY_IMPORTED }
@@ -24,8 +22,7 @@ enum class BatchStatus { ACTIVE, DONE }
 /**
  * One export session. While ACTIVE it owns the job rows; once everything in it has
  * finished, the rows are deleted and only this summary (the final result) remains.
- * A batch interrupted by unplugging the camera stays ACTIVE, so exporting again after
- * reconnecting continues it instead of starting a new one.
+ * Unplugging the camera fails whatever was left, so that batch finishes too.
  */
 data class ExportBatch(
     val id: Long = 0,
@@ -135,9 +132,8 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
     }
 
     /**
-     * Adds files and returns how many were actually added or revived. They join the
-     * current ACTIVE batch (including one left incomplete by an unplugged camera); a new
-     * batch starts only when the latest one is DONE or there is none.
+     * Adds files and returns how many were actually added. They join the batch that is
+     * still running; a new batch starts when the latest one is DONE or there is none.
      */
     fun enqueue(requests: List<ExportRequest>): Int = synchronized(lock) {
         var added = 0
@@ -149,11 +145,6 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
             when (existing?.status) {
                 // Already done or already in line in this batch: never queue a file twice.
                 ExportStatus.QUEUED, ExportStatus.RUNNING, ExportStatus.COMPLETED -> continue
-                ExportStatus.WAITING_FOR_SOURCE -> {
-                    replace(existing.id) { it.copy(sourceId = request.sourceId, status = ExportStatus.QUEUED, progressPercent = 0) }
-                    added++
-                    continue
-                }
                 // A retry replaces the stale failure record for the same file.
                 ExportStatus.FAILED -> removeAll(listOf(existing))
                 null -> Unit
@@ -177,8 +168,8 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
     }
 
     /**
-     * Collapses a fully finished batch into its summary: when no row is waiting, running
-     * or parked for a missing camera, the rows are deleted and the totals kept.
+     * Collapses a fully finished batch into its summary: when no row is waiting or
+     * running, the rows are deleted and the totals kept.
      */
     fun finalizeActiveBatch(): Boolean = synchronized(lock) {
         val batch = activeBatch() ?: return false
@@ -220,7 +211,12 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
 
     fun fail(id: Long, message: String) = replace(id) { it.copy(status = ExportStatus.FAILED, progressPercent = 0, errorMessage = message) }
 
-    fun waitForSource(id: Long) = replace(id) { it.copy(status = ExportStatus.WAITING_FOR_SOURCE, progressPercent = 0) }
+    /** Fails every waiting row at once, with one cause, instead of each starting and failing in turn. */
+    fun failQueued(message: String): Int = synchronized(lock) {
+        val queued = state.value.filter { it.status == ExportStatus.QUEUED }
+        queued.forEach { fail(it.id, message) }
+        queued.size
+    }
 
     fun requeue(id: Long) = replace(id) { it.copy(status = ExportStatus.QUEUED, progressPercent = 0) }
 
@@ -233,21 +229,6 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
             persistence.deleteBatches(listOf(batch.id))
             batchState.value = batchState.value.filter { it.id != batch.id }
         }
-    }
-
-    /**
-     * The camera is back: waiting jobs whose file is visible again continue, following the
-     * file to its new URI if the volume was mounted somewhere else.
-     */
-    fun resumeWaiting(available: List<ExportRequest>): Int = synchronized(lock) {
-        val byKey = available.associateBy { it.fileKey }
-        var resumed = 0
-        for (job in state.value.filter { it.status == ExportStatus.WAITING_FOR_SOURCE }) {
-            val match = byKey[job.fileKey] ?: continue
-            replace(job.id) { it.copy(sourceId = match.sourceId, status = ExportStatus.QUEUED) }
-            resumed++
-        }
-        resumed
     }
 
     /** "Delete export history": every batch and every row goes away. */

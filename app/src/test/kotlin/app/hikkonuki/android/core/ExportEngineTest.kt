@@ -16,7 +16,6 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import java.io.File
-import java.io.IOException
 import java.io.RandomAccessFile
 import java.time.Instant
 import java.time.ZoneId
@@ -322,61 +321,311 @@ class ExportEngineTest {
     }
 
     @Test
-    fun cancellingTheOnlyUnfinishedRowCompletesTheBatch() = scope.runTest {
+    fun cancellingTheLastWaitingRowCompletesTheBatch() = scope.runTest {
         val engine = engine()
-        engine.enqueue(listOf(photo("a.jpg"), photo("b.jpg")))
-        source.files.remove("usb://b.jpg")
-        engine.drain()
-        val waiting = engine.queue.jobs.value.single { it.status == ExportStatus.WAITING_FOR_SOURCE }
-        assertEquals(BatchStatus.ACTIVE, batch(engine).status)
-        engine.cancel(waiting.id)
-        assertEquals(Triple(BatchStatus.DONE, 1, 1), batch(engine).let { Triple(it.status, it.totalCount, it.succeededCount) })
+        engine.enqueue(listOf(photo("a.jpg"), video("DJI_20261107113403_0005_D.MP4"), photo("b.jpg")))
+        val draining = launch { engine.drain() }
+        advanceTimeBy(3_000)
+        engine.cancel(engine.queue.jobs.value[2].id)
+        draining.join()
+        assertEquals(Triple(BatchStatus.DONE, 2, 2), batch(engine).let { Triple(it.status, it.totalCount, it.succeededCount) })
+    }
+
+    // ---- The camera is unplugged in the middle of an export ----
+
+    private val usbRemoved = ExportEngine.USB_REMOVED_MESSAGE
+
+    private fun fourFiles() = listOf(
+        photo("a.jpg"),
+        video("DJI_20261107113403_0005_D.MP4"),
+        video("DJI_20261107114219_0006_D.MP4"),
+        photo("b.jpg"),
+    )
+
+    /** Two imported, the third and everything after it failed, and the batch is over. */
+    private fun assertEndedTwoOfFour(engine: ExportEngine) {
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
+            jobs(engine).map { it.status },
+        )
+        assertEquals(listOf(null, null, usbRemoved, usbRemoved), jobs(engine).map { it.errorMessage })
+        val summary = batch(engine)
+        assertEquals(BatchStatus.DONE, summary.status)
+        assertEquals(Triple(4, 2, 2), Triple(summary.totalCount, summary.succeededCount, summary.failedCount))
+        // Nothing is left running, queued, or half-written, in memory or on disk.
         assertTrue(engine.queue.jobs.value.isEmpty())
+        assertTrue(persistence.rows.isEmpty())
+        assertFalse(engine.queue.hasQueued())
+        assertTrue(gallery.pendingFiles.isEmpty())
+        assertEquals(setOf("a.jpg", "DJI_20261107113403_0005_D_slim.mp4"), gallery.published.keys)
+        assertEquals(ExportEngine.Ending.FAILED, engine.lastEnded!!.second)
+        assertEquals("DJI_20261107114219_0006_D.MP4", engine.lastEnded!!.first.displayName)
     }
 
     @Test
-    fun unpluggingParksJobsAndPluggingBackInResumesThem() = scope.runTest {
+    fun unpluggedDuringTheThirdOfFourEndsTheExportAsTwoOfFour() = scope.runTest {
         val engine = engine()
-        val requests = listOf(photo("a.jpg"), video("DJI_20261107113403_0005_D.MP4"), video("DJI_20261107114219_0006_D.MP4"))
-        engine.enqueue(requests)
+        engine.enqueue(fourFiles())
         val draining = launch { engine.drain() }
-        advanceTimeBy(4_000)
-        assertEquals(ExportStatus.RUNNING, jobs(engine)[1].status)
+        // a.jpg is instant, the first video takes 10 s, so 14 s is inside the second video.
+        advanceTimeBy(14_000)
+        assertEquals("DJI_20261107114219_0006_D.MP4", engine.queue.jobs.value.single { it.status == ExportStatus.RUNNING }.displayName)
+        assertEquals(1, gallery.pendingFiles.size)
         source.plugged = false
         draining.join()
-        // The interrupted batch stays open with its rows visible.
-        assertEquals(BatchStatus.ACTIVE, batch(engine).status)
-        assertEquals(ExportEngine.Ending.FAILED, engine.lastEnded!!.second)
-        assertEquals(
-            listOf(ExportStatus.COMPLETED, ExportStatus.WAITING_FOR_SOURCE, ExportStatus.WAITING_FOR_SOURCE),
-            engine.queue.jobs.value.map { it.status },
-        )
-        assertTrue(gallery.pendingFiles.isEmpty())
-        assertEquals(setOf("a.jpg"), gallery.published.keys)
+        assertEndedTwoOfFour(engine)
+        // Only the two finished videos were ever handed to the encoder.
+        assertEquals(2, transcoder.calls.size)
+    }
 
-        // Replugged: the volume comes back under different ids.
+    @Test
+    fun unpluggedDuringTheThirdOfFourWhenTheDecoderNoticesFirst() = scope.runTest {
+        // Here the read error reaches the transcoder before the watchdog's second check.
+        transcoder.source = source
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        source.plugged = false
+        draining.join()
+        assertEndedTwoOfFour(engine)
+    }
+
+    @Test
+    fun unpluggedWhileAPhotoIsBeingCopiedEndsTheExportThere() = scope.runTest {
+        val engine = engine()
+        val requests = listOf(photo("a.jpg"), photo("b.jpg"), photo("c.jpg"), photo("d.jpg"))
+        engine.enqueue(requests)
+        var reads = 0
+        // Every photo is 5 chunks plus the end-of-file read; pull the cable inside the third.
+        source.onRead = { if (++reads == 15) source.plugged = false }
+        engine.drain()
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
+            jobs(engine).map { it.status },
+        )
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.errorMessage })
+        assertEquals(Triple(4, 2, 2), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(BatchStatus.DONE, batch(engine).status)
+        assertEquals(setOf("a.jpg", "b.jpg"), gallery.published.keys)
+        assertTrue(gallery.pendingFiles.isEmpty())
+    }
+
+    @Test
+    fun unpluggedBetweenFilesFailsTheRestWithoutStartingThem() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        // The cable goes the instant the second file's conversion is complete: that file is
+        // already safe on the phone, and the third must fail before any work is done on it.
+        transcoder.onDone = { source.plugged = false }
+        engine.drain()
+        assertEndedTwoOfFour(engine)
+        assertEquals(1, transcoder.calls.size)
+    }
+
+    @Test
+    fun unpluggedBeforeAnythingStartedFailsEverything() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        source.plugged = false
+        engine.drain()
+        assertEquals(List(4) { ExportStatus.FAILED }, jobs(engine).map { it.status })
+        assertEquals(List(4) { usbRemoved }, jobs(engine).map { it.errorMessage })
+        assertEquals(Triple(4, 0, 4), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertTrue(gallery.published.isEmpty())
+        assertTrue(transcoder.calls.isEmpty())
+    }
+
+    @Test
+    fun momentaryDropoutStillEndsTheExportEvenThoughTheCameraIsBackSecondsLater() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        source.plugged = false
+        // Back after 3 seconds: long enough to be noticed, far too short to finish anything.
+        advanceTimeBy(3_000)
+        source.plugged = true
+        draining.join()
+        assertEndedTwoOfFour(engine)
+        advanceTimeBy(60_000)
+        // Nothing restarts by itself once the batch has ended.
+        assertEquals(2, transcoder.calls.size)
+        assertEquals(BatchStatus.DONE, batch(engine).status)
+    }
+
+    @Test
+    fun dropoutTooShortToNoticeDoesNotDisturbTheExport() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_100)
+        // Gone for less than one watchdog interval and no read happened to hit it.
+        source.plugged = false
+        advanceTimeBy(500)
+        source.plugged = true
+        draining.join()
+        assertEquals(List(4) { ExportStatus.COMPLETED }, jobs(engine).map { it.status })
+        assertEquals(Triple(4, 4, 0), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+    }
+
+    // ---- Detach reported by the system (USB_DEVICE_DETACHED / MEDIA_* broadcasts) ----
+
+    @Test
+    fun detachReportDuringTheThirdOfFourEndsTheExportAsTwoOfFour() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        source.plugged = false
+        engine.sourceDisconnected()
+        // The waiting file fails at once, before the running one has even stopped.
+        assertEquals(ExportStatus.FAILED, engine.queue.jobs.value[3].status)
+        draining.join()
+        assertEndedTwoOfFour(engine)
+        // It did not take the watchdog's two seconds.
+        assertEquals(14_000, testScheduler.currentTime)
+    }
+
+    @Test
+    fun detachReportEndsTheExportEvenIfTheCameraIsAlreadyReadableAgain() = scope.runTest {
+        // A dropout so short that every file is readable again by the time anyone looks.
+        // The read in flight was still interrupted, so the report alone must decide.
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        engine.sourceDisconnected()
+        draining.join()
+        assertTrue(source.plugged)
+        assertEndedTwoOfFour(engine)
+        advanceTimeBy(60_000)
+        assertEquals(2, transcoder.calls.size)
+    }
+
+    @Test
+    fun detachReportWhileAPhotoIsBeingCopied() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(listOf(photo("a.jpg"), photo("b.jpg"), photo("c.jpg"), photo("d.jpg")))
+        var reads = 0
+        source.onRead = { if (++reads == 15) engine.sourceDisconnected() }
+        engine.drain()
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
+            jobs(engine).map { it.status },
+        )
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.errorMessage })
+        assertEquals(Triple(4, 2, 2), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(setOf("a.jpg", "b.jpg"), gallery.published.keys)
+        assertTrue(gallery.pendingFiles.isEmpty())
+    }
+
+    @Test
+    fun repeatedDetachReportsAreHarmless() = scope.runTest {
+        // One cable pull produces several broadcasts (device detached, eject, bad removal).
+        val engine = engine()
+        engine.enqueue(fourFiles())
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        source.plugged = false
+        repeat(3) { engine.sourceDisconnected() }
+        draining.join()
+        engine.sourceDisconnected()
+        assertEndedTwoOfFour(engine)
+    }
+
+    @Test
+    fun detachReportWithNothingRunningFailsWhatIsWaitingAndClosesTheBatch() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(listOf(photo("a.jpg"), photo("b.jpg")))
+        engine.sourceDisconnected()
+        assertEquals(List(2) { ExportStatus.FAILED }, jobs(engine).map { it.status })
+        assertEquals(Triple(BatchStatus.DONE, 2, 2), batch(engine).let { Triple(it.status, it.totalCount, it.failedCount) })
+        engine.drain()
+        assertTrue(gallery.published.isEmpty())
+    }
+
+    @Test
+    fun detachReportWithNoExportAtAllDoesNothing() {
+        val engine = engine()
+        engine.sourceDisconnected()
+        assertTrue(engine.queue.batches.value.isEmpty())
+        assertNull(engine.lastEnded)
+    }
+
+    @Test
+    fun aDetachReportDoesNotLeakIntoTheNextExport() = scope.runTest {
+        val engine = engine()
+        val requests = fourFiles()
+        engine.enqueue(requests)
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        engine.sourceDisconnected()
+        draining.join()
+        // Same camera, same files, straight away: everything goes through this time.
+        engine.enqueue(requests)
+        engine.drain()
+        assertEquals(Triple(4, 4, 0), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(4, gallery.published.size)
+    }
+
+    @Test
+    fun aUserCancelIsStillACancelWhenADetachReportFollows() = scope.runTest {
+        val engine = engine()
+        engine.enqueue(listOf(video("DJI_20261107113403_0005_D.MP4")))
+        val draining = launch { engine.drain() }
+        advanceTimeBy(3_000)
+        engine.cancel(engine.queue.jobs.value.single().id)
+        engine.sourceDisconnected()
+        draining.join()
+        assertTrue(engine.queue.batches.value.isEmpty())
+        assertTrue(persistence.all.isEmpty())
+    }
+
+    @Test
+    fun afterReconnectingTheSameSelectionFinishesInANewBatch() = scope.runTest {
+        val engine = engine()
+        val requests = fourFiles()
+        engine.enqueue(requests)
+        val draining = launch { engine.drain() }
+        advanceTimeBy(14_000)
+        source.plugged = false
+        draining.join()
+        assertEndedTwoOfFour(engine)
+
+        // Replugged: the volume may come back under different ids.
         source.plugged = true
         val remounted = requests.map { it.copy(sourceId = it.sourceId.replace("usb://", "usb2://")) }
         for ((old, new) in requests.zip(remounted)) {
             source.files[new.sourceId] = source.files.remove(old.sourceId)!!
             prober.videos.remove(old.sourceId)?.let { prober.videos[new.sourceId] = it }
         }
-        assertTrue(engine.sourcesAvailable(remounted))
+        assertTrue(engine.enqueue(remounted))
+        assertEquals(listOf(BatchStatus.ACTIVE, BatchStatus.DONE), engine.queue.batches.value.map { it.status })
         engine.drain()
-        assertEquals(List(3) { ExportStatus.COMPLETED }, jobs(engine).map { it.status })
-        assertEquals(3, gallery.published.size)
-        assertEquals(Triple(BatchStatus.DONE, 3, 3), batch(engine).let { Triple(it.status, it.totalCount, it.succeededCount) })
-        assertEquals(1, engine.queue.batches.value.size)
+        // The two that had made it are recognised instead of being converted again.
+        assertEquals(
+            listOf(ExportOutcome.ALREADY_IMPORTED, ExportOutcome.ALREADY_IMPORTED, ExportOutcome.CONVERTED, ExportOutcome.COPIED),
+            jobs(engine).takeLast(4).map { it.outcome },
+        )
+        assertEquals(Triple(4, 4, 0), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(3, transcoder.calls.size)
+        assertEquals(4, gallery.published.size)
     }
 
     @Test
-    fun aJobWhoseSourceIsAlreadyGoneWaitsInsteadOfFailing() = scope.runTest {
-        val engine = engine()
-        engine.enqueue(listOf(photo("a.jpg"), video("DJI_20261107113403_0005_D.MP4")))
+    fun unpluggedStateSurvivesARestartAsAFinishedBatch() = scope.runTest {
+        val first = engine()
+        first.enqueue(fourFiles())
+        val draining = launch { first.drain() }
+        advanceTimeBy(14_000)
         source.plugged = false
-        engine.drain()
-        assertEquals(List(2) { ExportStatus.WAITING_FOR_SOURCE }, jobs(engine).map { it.status })
-        assertFalse(engine.sourcesAvailable(emptyList()))
+        draining.join()
+        // A fresh process reading the same store sees a closed batch and nothing to do.
+        val second = engine()
+        assertFalse(second.start())
+        assertTrue(second.queue.jobs.value.isEmpty())
+        assertEquals(Triple(4, 2, 2), batch(second).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
     }
 
     @Test
@@ -426,6 +675,127 @@ class ExportEngineTest {
         second.drain()
         assertEquals(List(3) { ExportStatus.COMPLETED }, jobs(second).map { it.status })
         assertEquals(setOf("a.jpg", "DJI_20261107113403_0005_D_slim.mp4", "b.jpg"), gallery.published.keys)
+    }
+
+    // ---- The app process is killed (no broadcast), then started again ----
+
+    /** Runs [files] until [atMillis], then kills the process: no cleanup code gets to run. */
+    private suspend fun kotlinx.coroutines.test.TestScope.killedAt(atMillis: Long, files: List<ExportRequest>) {
+        val first = engine()
+        first.enqueue(files)
+        val draining = launch { first.drain() }
+        advanceTimeBy(atMillis)
+        val rows = persistence.rows.toMap()
+        val batches = persistence.batches.toMap()
+        val archived = persistence.archive.toMap()
+        val orphans = gallery.pendingFiles.associateWith { it.readBytes() }
+        draining.cancel()
+        draining.join()
+        persistence.rows.clear(); persistence.rows.putAll(rows)
+        persistence.batches.clear(); persistence.batches.putAll(batches)
+        persistence.archive.clear(); persistence.archive.putAll(archived)
+        orphans.forEach { (file, bytes) -> file.writeBytes(bytes) }
+    }
+
+    @Test
+    fun killedDuringTheThirdOfFourWithTheCameraStillAttachedContinuesToFourOfFour() = scope.runTest {
+        killedAt(14_000, fourFiles())
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.RUNNING, ExportStatus.QUEUED),
+            persistence.rows.values.map { it.status },
+        )
+        assertEquals(1, gallery.pendingFiles.size)
+
+        val restarted = engine()
+        assertTrue(restarted.start())
+        // Same batch, the two finished files untouched, the interrupted one back in line.
+        assertEquals(1, restarted.queue.batches.value.size)
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.QUEUED, ExportStatus.QUEUED),
+            restarted.queue.jobs.value.map { it.status },
+        )
+        assertTrue(gallery.pendingFiles.isEmpty())
+        restarted.drain()
+        assertEquals(List(4) { ExportStatus.COMPLETED }, jobs(restarted).map { it.status })
+        assertEquals(Triple(4, 4, 0), batch(restarted).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(BatchStatus.DONE, batch(restarted).status)
+        assertEquals(
+            setOf("a.jpg", "DJI_20261107113403_0005_D_slim.mp4", "DJI_20261107114219_0006_D_slim.mp4", "b.jpg"),
+            gallery.published.keys,
+        )
+        // The first two were not converted or copied a second time.
+        assertEquals(3, transcoder.calls.size)
+    }
+
+    @Test
+    fun killedAndTheCameraIsGoneOnRestartEndsTheExportAsTwoOfFour() = scope.runTest {
+        killedAt(14_000, fourFiles())
+        source.plugged = false
+
+        val restarted = engine()
+        // Decided at startup, without starting any work.
+        assertFalse(restarted.start())
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
+            jobs(restarted).map { it.status },
+        )
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.errorMessage })
+        val summary = batch(restarted)
+        assertEquals(BatchStatus.DONE, summary.status)
+        assertEquals(Triple(4, 2, 2), Triple(summary.totalCount, summary.succeededCount, summary.failedCount))
+        assertTrue(restarted.queue.jobs.value.isEmpty())
+        assertTrue(persistence.rows.isEmpty())
+        assertTrue(gallery.pendingFiles.isEmpty())
+        assertEquals(setOf("a.jpg", "DJI_20261107113403_0005_D_slim.mp4"), gallery.published.keys)
+        restarted.drain()
+        assertEquals(2, transcoder.calls.size)
+    }
+
+    @Test
+    fun cameraUnpluggedAfterTheRestartIsHandledLikeAnyOtherUnplug() = scope.runTest {
+        killedAt(14_000, fourFiles())
+        val restarted = engine()
+        assertTrue(restarted.start())
+        val draining = launch { restarted.drain() }
+        advanceTimeBy(4_000)
+        source.plugged = false
+        restarted.sourceDisconnected()
+        draining.join()
+        assertEquals(Triple(4, 2, 2), batch(restarted).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.errorMessage })
+        assertTrue(gallery.pendingFiles.isEmpty())
+    }
+
+    @Test
+    fun killedTwiceStillContinues() = scope.runTest {
+        killedAt(14_000, fourFiles())
+        val second = engine()
+        assertTrue(second.start())
+        val draining = launch { second.drain() }
+        advanceTimeBy(5_000)
+        // killed again, same way
+        val rows = persistence.rows.toMap()
+        draining.cancel()
+        draining.join()
+        persistence.rows.clear(); persistence.rows.putAll(rows)
+
+        val third = engine()
+        assertTrue(third.start())
+        third.drain()
+        assertEquals(Triple(4, 4, 0), batch(third).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
+        assertTrue(gallery.pendingFiles.isEmpty())
+    }
+
+    @Test
+    fun killedWhileOnlyWaitingFilesRemainedDoesNotMistakeItForAnUnplug() = scope.runTest {
+        // Killed in the gap between two files: nothing was running, so there is no
+        // evidence about the camera either way and the queue is simply continued.
+        val first = engine()
+        first.enqueue(listOf(photo("a.jpg"), photo("b.jpg")))
+        val restarted = engine()
+        assertTrue(restarted.start())
+        restarted.drain()
+        assertEquals(Triple(2, 2, 0), batch(restarted).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
     }
 
     @Test

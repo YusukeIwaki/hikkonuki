@@ -81,7 +81,6 @@ class AppViewModel(private val library: MediaLibrary, private val exports: Expor
                 initialLoadDone = true
                 if (items.isNotEmpty()) {
                     mountRetries = 0
-                    exports.sourcesAvailable(items.map(MediaItem::toRequest))
                     loadVideoDetails()
                 }
                 // Android announces the USB device a few seconds before its storage is readable.

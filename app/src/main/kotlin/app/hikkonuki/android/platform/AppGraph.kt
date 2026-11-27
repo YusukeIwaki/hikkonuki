@@ -41,7 +41,6 @@ class AppGraph private constructor(context: Context) {
         override val batches: StateFlow<List<ExportBatch>> get() = engine.queue.batches
         private fun run(hasWork: Boolean) { if (hasWork) ExportService.start(appContext) }
         override fun export(requests: List<ExportRequest>) = run(engine.enqueue(requests))
-        override fun sourcesAvailable(requests: List<ExportRequest>) = run(engine.sourcesAvailable(requests))
         override fun resume() = run(hadPendingWork && engine.queue.hasQueued())
         override fun cancel(jobId: Long) = engine.cancel(jobId)
         override fun clearHistory() = engine.clearHistory()

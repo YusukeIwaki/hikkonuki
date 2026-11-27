@@ -14,6 +14,7 @@ import androidx.compose.ui.test.performTouchInput
 import app.hikkonuki.android.HikkonukiApp
 import app.hikkonuki.android.core.BatchStatus
 import app.hikkonuki.android.core.ExportBatch
+import app.hikkonuki.android.core.ExportEngine
 import app.hikkonuki.android.core.ExportJob
 import app.hikkonuki.android.core.ExportOutcome
 import app.hikkonuki.android.core.ExportStatus
@@ -137,7 +138,7 @@ class ScreensTest {
                 job(2, "b.mp4", ExportStatus.RUNNING).copy(progressPercent = 37),
                 job(3, "c.mp4", ExportStatus.QUEUED),
                 job(4, "d.mp4", ExportStatus.FAILED).copy(errorMessage = "スマートフォンの空き容量が足りません"),
-                job(5, "e.mp4", ExportStatus.WAITING_FOR_SOURCE),
+                job(5, "e.mp4", ExportStatus.FAILED).copy(errorMessage = ExportEngine.USB_REMOVED_MESSAGE),
             ),
             ExportBatch(1, BatchStatus.ACTIVE),
         )
@@ -146,17 +147,17 @@ class ScreensTest {
         compose.onNodeWithText("83.3 MB ・ DCIM/Hikkonuki").assertIsDisplayed()
         compose.onNodeWithText("エクスポート中 37%").assertIsDisplayed()
         compose.onNodeWithTag("exportProgress_2").assertIsDisplayed()
-        compose.onNodeWithText("失敗").assertIsDisplayed()
+        compose.onAllNodesWithText("失敗").assertCountEquals(2)
         compose.onNodeWithText("スマートフォンの空き容量が足りません").assertIsDisplayed()
-        compose.onNodeWithText("USBが取り外されました。接続し直すと再開します。").assertIsDisplayed()
-        compose.onAllNodesWithText("待機中").assertCountEquals(2)
-        // Finished rows cannot be cancelled; waiting, running and parked ones can.
+        compose.onNodeWithText("USBが取り外されました。接続し直して再度エクスポートしてください。").assertIsDisplayed()
+        compose.onNodeWithText("待機中").assertIsDisplayed()
+        // Finished rows cannot be cancelled; waiting and running ones can.
         compose.onAllNodesWithTag("cancelJob_1").assertCountEquals(0)
         compose.onAllNodesWithTag("cancelJob_4").assertCountEquals(0)
+        compose.onAllNodesWithTag("cancelJob_5").assertCountEquals(0)
         compose.onNodeWithTag("cancelJob_3").performClick()
-        compose.onNodeWithTag("cancelJob_5").performClick()
         compose.onNodeWithTag("clearExportHistory").performClick()
-        assertEquals(listOf("cancel 3", "cancel 5", "clear"), events)
+        assertEquals(listOf("cancel 3", "clear"), events)
     }
 
     @Test

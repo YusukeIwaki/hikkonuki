@@ -32,12 +32,11 @@ class SqliteJobPersistenceTest {
         queue.complete(a.id, ExportOutcome.CONVERTED, "content://media/1", 87_296_455, "2560×1440 ・ HEVC 10bit ・ 14Mbps")
         queue.markRunning(b.id)
         queue.fail(b.id, "スマートフォンの空き容量が足りません")
-        queue.waitForSource(c.id)
 
         val reopened = ExportQueue(persistence()) { 1234L }
         assertEquals(queue.jobs.value, reopened.jobs.value)
         assertEquals(queue.batches.value, reopened.batches.value)
-        assertEquals(ExportStatus.WAITING_FOR_SOURCE, reopened.jobs.value[2].status)
+        assertEquals(ExportStatus.QUEUED, reopened.jobs.value[2].status)
         assertEquals(reopened.batches.value.single().id, reopened.jobs.value[0].batchId)
 
         // Finishing collapses the batch to its summary, which also survives.

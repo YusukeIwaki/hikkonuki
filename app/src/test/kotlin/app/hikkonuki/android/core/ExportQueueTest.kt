@@ -85,13 +85,12 @@ class ExportQueueTest {
     }
 
     @Test
-    fun batchWithWorkLeftOrAParkedFileStaysOpenAndIsJoinedByLaterExports() {
+    fun batchWithWorkLeftStaysOpenAndIsJoinedByLaterExports() {
         val queue = queue()
         queue.enqueue(listOf(request("a.mp4"), request("b.mp4")))
-        val (a, b) = queue.jobs.value
+        val (a, _) = queue.jobs.value
         queue.markRunning(a.id)
         queue.complete(a.id, ExportOutcome.CONVERTED, "out://a", 10, null)
-        queue.waitForSource(b.id)
         assertFalse(queue.finalizeActiveBatch())
         queue.enqueue(listOf(request("c.mp4")))
         assertEquals(1, queue.batches.value.size)
@@ -160,20 +159,19 @@ class ExportQueueTest {
     }
 
     @Test
-    fun waitingJobsResumeAndFollowTheFileToItsNewId() {
+    fun failQueuedLeavesFinishedAndRunningRowsAlone() {
         val queue = queue()
-        queue.enqueue(listOf(request("a.mp4"), request("b.mp4")))
-        queue.jobs.value.forEach { queue.waitForSource(it.id) }
-        assertNull(queue.nextQueued())
-        assertEquals(1, queue.resumeWaiting(listOf(request("a.mp4", id = "usb2://a.mp4"), request("zzz.mp4"))))
-        val a = queue.jobs.value[0]
-        assertEquals(ExportStatus.QUEUED, a.status)
-        assertEquals("usb2://a.mp4", a.sourceId)
-        assertEquals(ExportStatus.WAITING_FOR_SOURCE, queue.jobs.value[1].status)
-        // Selecting the file again by hand has the same effect.
-        assertEquals(1, queue.enqueue(listOf(request("b.mp4", id = "usb2://b.mp4"))))
-        assertEquals("usb2://b.mp4", queue.jobs.value[1].sourceId)
-        assertEquals(ExportStatus.QUEUED, queue.jobs.value[1].status)
+        queue.enqueue(listOf(request("a.mp4"), request("b.mp4"), request("c.mp4"), request("d.mp4")))
+        val (a, b, c, d) = queue.jobs.value
+        queue.markRunning(a.id); queue.complete(a.id, ExportOutcome.COPIED, "out://a", 1, null)
+        queue.markRunning(b.id)
+        assertEquals(2, queue.failQueued("gone"))
+        assertEquals(
+            listOf(ExportStatus.COMPLETED, ExportStatus.RUNNING, ExportStatus.FAILED, ExportStatus.FAILED),
+            queue.jobs.value.map { it.status },
+        )
+        assertEquals(listOf("gone", "gone"), listOf(c, d).map { persistence.rows.getValue(it.id).errorMessage })
+        assertEquals(0, queue.failQueued("gone"))
     }
 
     @Test

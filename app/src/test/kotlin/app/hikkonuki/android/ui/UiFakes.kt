@@ -43,7 +43,6 @@ class FakeExports : ExportController {
     override val jobs = MutableStateFlow<List<ExportJob>>(emptyList())
     override val batches = MutableStateFlow<List<ExportBatch>>(emptyList())
     val exported = ArrayList<List<ExportRequest>>()
-    val available = ArrayList<List<ExportRequest>>()
     val cancelled = ArrayList<Long>()
     var resumed = 0
     var cleared = 0
@@ -65,7 +64,6 @@ class FakeExports : ExportController {
         jobs.value = emptyList()
     }
 
-    override fun sourcesAvailable(requests: List<ExportRequest>) { available += requests }
     override fun resume() { resumed++ }
     override fun cancel(jobId: Long) { cancelled += jobId }
     override fun clearHistory() {

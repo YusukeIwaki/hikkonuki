@@ -11,6 +11,7 @@ import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.IBinder
 import android.os.PowerManager
+import android.os.SystemClock
 import androidx.core.app.NotificationCompat
 import androidx.core.app.ServiceCompat
 import androidx.core.content.ContextCompat
@@ -41,22 +42,37 @@ class ExportService : Service() {
         getSystemService(PowerManager::class.java).newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "hikkonuki:export").apply { setReferenceCounted(false) }
     }
 
+    private val usbDetached = UsbDetachReceiver { engine.sourceDisconnected() }
+
     override fun onBind(intent: Intent?): IBinder? = null
 
     override fun onCreate() {
         super.onCreate()
+        usbDetached.register(this)
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
             NotificationChannel(CHANNEL_ID, "エクスポート", NotificationManager.IMPORTANCE_LOW).apply { description = "動画・写真のエクスポート進捗" },
         )
         scope.launch {
+            // Android drops notification updates that come faster than a few per second,
+            // and a dropped update can be the last one. Progress is therefore throttled;
+            // a change of file always gets through.
+            var shownId: Long? = null
+            var shownAt = 0L
             engine.queue.jobs.map(::summarize).distinctUntilChanged().collect { summary ->
-                if (draining?.isActive == true) manager.notify(NOTIFICATION_ID, progressNotification(summary))
+                val now = SystemClock.elapsedRealtime()
+                val due = summary?.id != shownId || now - shownAt >= PROGRESS_INTERVAL_MILLIS
+                if (draining?.isActive == true && due) {
+                    shownId = summary?.id
+                    shownAt = now
+                    manager.notify(NOTIFICATION_ID, progressNotification(summary))
+                }
             }
         }
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        getSystemService(NotificationManager::class.java).cancel(RESULT_NOTIFICATION_ID)
         ServiceCompat.startForeground(
             this, NOTIFICATION_ID, progressNotification(summarize(engine.queue.jobs.value)),
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC,
@@ -77,14 +93,18 @@ class ExportService : Service() {
     }
 
     private fun finish() {
-        // Detach instead of removing: the result stays in the shade after the service stops.
-        stopForeground(STOP_FOREGROUND_DETACH)
+        // The result is posted as a new notification rather than as an update of the
+        // progress one: updates can be dropped by rate limiting, which would leave an
+        // undismissable "exporting" notification behind after the service is gone.
+        stopForeground(STOP_FOREGROUND_REMOVE)
         val manager = getSystemService(NotificationManager::class.java)
-        resultNotification()?.let { manager.notify(NOTIFICATION_ID, it) } ?: manager.cancel(NOTIFICATION_ID)
+        manager.cancel(NOTIFICATION_ID)
+        resultNotification()?.let { manager.notify(RESULT_NOTIFICATION_ID, it) }
         stopSelf()
     }
 
     override fun onDestroy() {
+        usbDetached.unregister(this)
         scope.cancel()
         if (wakeLock.isHeld) wakeLock.release()
         super.onDestroy()
@@ -145,6 +165,8 @@ class ExportService : Service() {
     companion object {
         private const val CHANNEL_ID = "export"
         private const val NOTIFICATION_ID = 42
+        private const val RESULT_NOTIFICATION_ID = 43
+        private const val PROGRESS_INTERVAL_MILLIS = 500L
 
         fun start(context: Context) {
             ContextCompat.startForegroundService(context, Intent(context, ExportService::class.java))
