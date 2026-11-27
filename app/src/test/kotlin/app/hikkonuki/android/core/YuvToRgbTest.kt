@@ -19,12 +19,12 @@ class YuvToRgbTest {
     @Test
     fun fullRangeKeepsItsLevels() {
         val c = YuvToRgb(fullRange = true, bt601 = false, tenBit = false)
-        assertRgb(floatArrayOf(0f, 0f, 0f), c.convert(0f, 0.5f, 0.5f))
-        assertRgb(floatArrayOf(1f, 1f, 1f), c.convert(1f, 0.5f, 0.5f))
+        assertRgb(floatArrayOf(0f, 0f, 0f), c.convert(0f, 128 / 255f, 128 / 255f))
+        assertRgb(floatArrayOf(1f, 1f, 1f), c.convert(1f, 128 / 255f, 128 / 255f))
         // A dark grey stays the same dark grey: this is what goes wrong when full-range
         // video is expanded as if it were limited range (it would come out as 0.007).
-        assertRgb(floatArrayOf(0.069f, 0.069f, 0.069f), c.convert(0.069f, 0.5f, 0.5f))
-        assertRgb(floatArrayOf(1f, 0f, 0f), c.convert(0.2126f, 0.3854f, 1f))
+        assertRgb(floatArrayOf(0.069f, 0.069f, 0.069f), c.convert(0.069f, 128 / 255f, 128 / 255f))
+        assertRgb(floatArrayOf(1f, 0f, 0f), c.convert(54 / 255f, 99 / 255f, 1f))
     }
 
     @Test

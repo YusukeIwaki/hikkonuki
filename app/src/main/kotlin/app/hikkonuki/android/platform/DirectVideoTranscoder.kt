@@ -358,15 +358,16 @@ class DirectVideoTranscoder(private val source: AndroidSource, private val tenBi
             val version = IntArray(2)
             check(EGL14.eglInitialize(display, version, 0, version, 1)) { "eglInitialize failed" }
             val colorBits = if (tenBit) 10 else 8
+            // EGL_RECORDABLE_ANDROID is only asked for with 8 bits: on Tensor (and as Media3
+            // does for its HDR path) the 10-10-10-2 configs are not flagged recordable, yet
+            // an encoder's input surface accepts them.
             val attributes = intArrayOf(
                 EGL14.EGL_RED_SIZE, colorBits,
                 EGL14.EGL_GREEN_SIZE, colorBits,
                 EGL14.EGL_BLUE_SIZE, colorBits,
                 EGL14.EGL_ALPHA_SIZE, if (tenBit) 2 else 8,
                 EGL14.EGL_RENDERABLE_TYPE, EGLExt.EGL_OPENGL_ES3_BIT_KHR,
-                EGL_RECORDABLE_ANDROID, 1,
-                EGL14.EGL_NONE,
-            )
+            ) + (if (tenBit) intArrayOf() else intArrayOf(EGL_RECORDABLE_ANDROID, 1)) + intArrayOf(EGL14.EGL_NONE)
             val configs = arrayOfNulls<EGLConfig>(16)
             val count = IntArray(1)
             check(EGL14.eglChooseConfig(display, attributes, 0, configs, 0, configs.size, count, 0)) { "eglChooseConfig failed" }
@@ -375,7 +376,7 @@ class DirectVideoTranscoder(private val source: AndroidSource, private val tenBi
                 val red = IntArray(1)
                 EGL14.eglGetConfigAttrib(display, candidate, EGL14.EGL_RED_SIZE, red, 0)
                 red[0] == colorBits
-            } ?: throw UnsupportedOperationException("no $colorBits-bit recordable EGL config")
+            } ?: throw UnsupportedOperationException("no $colorBits-bit EGL config")
             context = EGL14.eglCreateContext(display, config, EGL14.EGL_NO_CONTEXT, intArrayOf(EGL14.EGL_CONTEXT_CLIENT_VERSION, 3, EGL14.EGL_NONE), 0)
             check(context != EGL14.EGL_NO_CONTEXT) { "eglCreateContext failed" }
             eglSurface = EGL14.eglCreateWindowSurface(display, config, surface, intArrayOf(EGL14.EGL_NONE), 0)

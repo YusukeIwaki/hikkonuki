@@ -19,7 +19,8 @@ class YuvToRgb(val fullRange: Boolean, val bt601: Boolean, val tenBit: Boolean) 
         val lumaScale = if (fullRange) 1.0 else max / (219 * unit)
         val chromaScale = if (fullRange) 1.0 else max / (224 * unit)
         val lumaOffset = if (fullRange) 0.0 else 16 * unit / max
-        val chromaOffset = if (fullRange) 0.5 else 128 * unit / max
+        // Chroma is centred on code 128 (512 in 10-bit) in both ranges, which is not exactly 0.5.
+        val chromaOffset = 128 * unit / max
         val (kr, kb) = if (bt601) 0.299 to 0.114 else 0.2126 to 0.0722
         val kg = 1 - kr - kb
         val crToR = 2 * (1 - kr)
