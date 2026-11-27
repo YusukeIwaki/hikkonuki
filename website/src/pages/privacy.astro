@@ -1,0 +1,30 @@
+---
+import Layout from "../layouts/Layout.astro";
+---
+
+<Layout lang="en" path="privacy/" title="Privacy Policy"
+  description="How Hikkonuki handles photos, videos and other data on Android.">
+  <article class="policy">
+    <h1>Privacy Policy</h1>
+    <p class="note">Effective November 27, 2026</p>
+    <p>Yusuke Iwaki develops Hikkonuki, an Android app for importing photos and videos from USB cameras. Hikkonuki processes media on your device. It has no account, ads or analytics, and it does not send your media or other personal data to the developer or third parties.</p>
+
+    <h2>Photos, videos and folder access</h2>
+    <p>Hikkonuki reads media from connected USB storage and from folders you grant access to through Android’s folder picker. It reads images, video and audio tracks, and file information such as names, capture dates and media properties to display previews, organize media and create exports. Exporting leaves the originals in place. Exported files can contain embedded metadata from the source, particularly when a file is copied unchanged.</p>
+    <p>Android retains access to a folder you grant so Hikkonuki can find it again. Hikkonuki saves exports to <code>DCIM/Hikkonuki</code> through Android’s media library. Gallery, sharing or backup apps can then access those files in accordance with Android permissions and your settings. If you share an export or enable a separate backup service, that service handles the file under its own privacy policy.</p>
+
+    <h2>Local storage and deletion</h2>
+    <p>Android restricts access to Hikkonuki’s private app storage. Hikkonuki stores its export queue there, including source references, file names and progress, so interrupted work can be recovered. Completed job details are removed, and the app keeps a summary of the most recent export. You can clear completed export history from Export status. Clearing the app’s storage in Android Settings or uninstalling it removes its private data. To delete exported media, use your gallery or file manager.</p>
+    <p>Hikkonuki uses Android notifications to show export progress and results when notifications are enabled. You can manage them in Android Settings.</p>
+
+    <h2>Product website</h2>
+    <p>This site remembers your language choice in your browser’s local storage. You can clear it in your browser settings. GitHub Pages hosts the site and logs visitors’ IP addresses for security purposes. <a href="https://docs.github.com/en/pages/getting-started-with-github-pages/about-github-pages">About GitHub Pages</a></p>
+
+    <h2>Contact</h2>
+    <p>For privacy questions or requests, email Yusuke Iwaki at <a href="mailto:q7w8e9w8q7w8e9@yahoo.co.jp">q7w8e9w8q7w8e9@yahoo.co.jp</a>. The developer uses your email address and the information you provide to respond. Please send only the details needed for your inquiry. You can use the same address to request deletion of your correspondence.</p>
+  </article>
+</Layout>
+
+<style>
+  .policy { max-width: 72ch; }
+</style>

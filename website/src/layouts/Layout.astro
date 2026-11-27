@@ -17,6 +17,7 @@ const text = {
       ["export/", "Export"],
     ],
     footer: "Hikkonuki is an Android app. Android 11 or later.",
+    privacy: "Privacy Policy",
   },
   ja: {
     description: "ジンバルカメラやアクションカメラの写真・動画をUSBで取り込み、4K動画をスマートフォン上で2Kに変換してシェアするAndroidアプリ。",
@@ -27,6 +28,7 @@ const text = {
       ["export/", "エクスポート"],
     ],
     footer: "HikkonukiはAndroidアプリです。Android 11以降で動きます。",
+    privacy: "プライバシーポリシー",
   },
 };
 
@@ -172,6 +174,7 @@ const root = roots[lang];
     <footer class="site">
       <div class="bar">
         <span>{t.footer}</span>
+        <a href={`${root}privacy/`} aria-current={path === "privacy/" ? "page" : undefined}>{t.privacy}</a>
       </div>
     </footer>
     <script is:inline>
