@@ -186,9 +186,9 @@ class ScreensTest {
         assertEquals(listOf("back"), events)
     }
 
-    private fun app(library: FakeLibrary, exports: FakeExports, signal: () -> Int = { 0 }): AppViewModel {
+    private fun app(library: FakeLibrary, exports: FakeExports, signal: () -> Int = { 0 }, usbAttached: () -> Int = { 0 }): AppViewModel {
         val viewModel = AppViewModel(library, exports)
-        compose.setContent { HikkonukiTheme { HikkonukiApp(viewModel, openExportsSignal = signal()) } }
+        compose.setContent { HikkonukiTheme { HikkonukiApp(viewModel, openExportsSignal = signal(), showBrowserSignal = usbAttached()) } }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("mediaGrid").fetchSemanticsNodes().isNotEmpty() }
         return viewModel
     }
@@ -236,7 +236,7 @@ class ScreensTest {
         val library = FakeLibrary().apply { snapshot = LibrarySnapshot(true, listOf(video, photo)) }
         val exports = FakeExports()
         val signal = androidx.compose.runtime.mutableIntStateOf(0)
-        app(library, exports) { signal.intValue }
+        app(library, exports, signal = { signal.intValue })
         signal.intValue = 1
         compose.onNodeWithTag("exportsEmpty").assertIsDisplayed()
         compose.onNodeWithTag("exportsBack").performClick()
@@ -245,6 +245,32 @@ class ScreensTest {
         compose.onNodeWithText("エクスポート").performClick()
         assertEquals(listOf(photo.toRequest()), exports.exported.single())
         compose.onNodeWithTag("exportsList").assertIsDisplayed()
+    }
+
+    @Test
+    fun pluggingACameraInAlwaysLandsOnTheMediaList() {
+        val library = FakeLibrary().apply { snapshot = LibrarySnapshot(true, listOf(video, photo)) }
+        val exports = FakeExports()
+        val attached = androidx.compose.runtime.mutableIntStateOf(0)
+        app(library, exports, usbAttached = { attached.intValue })
+
+        // The app was left on the exports screen of an earlier session.
+        compose.onNodeWithContentDescription("メニュー").performClick()
+        compose.onNodeWithText("エクスポート状況").performClick()
+        compose.onNodeWithTag("exportsEmpty").assertIsDisplayed()
+        attached.intValue++
+        compose.onNodeWithTag("mediaGrid").assertIsDisplayed()
+        compose.onAllNodesWithTag("exportsEmpty").assertCountEquals(0)
+
+        // Same from a detail screen reached through the exports screen's back stack.
+        compose.onNodeWithTag("mediaItem_${photo.displayName}").performClick()
+        compose.onNodeWithTag("metadataPanel").assertIsDisplayed()
+        attached.intValue++
+        compose.onNodeWithTag("mediaGrid").assertIsDisplayed()
+
+        // Already on the list: nothing happens, and back still leaves the app as before.
+        attached.intValue++
+        compose.onNodeWithTag("mediaGrid").assertIsDisplayed()
     }
 
     @Test

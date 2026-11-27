@@ -4,6 +4,7 @@ import android.net.Uri
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.ExperimentalCoroutinesApi
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.test.StandardTestDispatcher
 import kotlinx.coroutines.test.advanceTimeBy
 import kotlinx.coroutines.test.advanceUntilIdle
@@ -117,33 +118,110 @@ class AppViewModelTest {
         assertEquals(listOf(video), viewModel.state.value.items)
     }
 
+    /** Every state the screen was shown, in order, reduced to what decides the layout. */
+    private fun kotlinx.coroutines.test.TestScope.recordScreens(viewModel: AppViewModel): List<String> {
+        val seen = ArrayList<String>()
+        backgroundScope.launch(kotlinx.coroutines.test.UnconfinedTestDispatcher(testScheduler)) {
+            viewModel.state.collect { state ->
+                val screen = when {
+                    state.loading -> "spinner"
+                    !state.usbConnected -> "plug in"
+                    state.items.isEmpty() -> "pick folder"
+                    else -> "list"
+                }
+                if (seen.lastOrNull() != screen) seen += screen
+            }
+        }
+        return seen
+    }
+
     @Test
-    fun keepsLookingWhileAKnownCameraIsStillMounting() = runTest(dispatcher) {
+    fun waitingForAKnownCameraShowsOneSteadySpinnerNotABlinkPerRetry() = runTest(dispatcher) {
         connected(folders = listOf("content://tree/1"))
         val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
         runCurrent()
-        assertTrue(viewModel.state.value.canPickFolder)
-        advanceTimeBy(AppViewModel.MOUNT_RETRY_MILLIS * 2 + 1)
+        assertTrue(viewModel.state.value.loading)
+        advanceTimeBy(AppViewModel.MOUNT_RETRY_MILLIS * 3 + 1)
+        assertEquals(4, library.loads)
         connected(video, folders = listOf("content://tree/1"))
         advanceUntilIdle()
         assertEquals(listOf(video), viewModel.state.value.items)
+        // Four scans happened behind one uninterrupted spinner.
+        assertEquals(listOf("spinner", "list"), screens)
         val loads = library.loads
         advanceTimeBy(60_000)
         assertEquals(loads, library.loads)
     }
 
     @Test
-    fun givesUpRetryingAndNeverRetriesWithoutAKnownFolder() = runTest(dispatcher) {
+    fun givesUpWaitingAndThenOffersTheFolderPicker() = runTest(dispatcher) {
+        connected(folders = listOf("content://tree/1"))
+        val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
+        advanceUntilIdle()
+        assertEquals(1 + AppViewModel.MAX_MOUNT_RETRIES, library.loads)
+        assertTrue(viewModel.state.value.canPickFolder)
+        assertEquals(listOf("spinner", "pick folder"), screens)
+    }
+
+    @Test
+    fun withoutAKnownFolderThereIsNothingToWaitFor() = runTest(dispatcher) {
         connected()
         val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
         advanceUntilIdle()
         assertEquals(1, library.loads)
         assertTrue(viewModel.state.value.canPickFolder)
+        assertEquals(listOf("spinner", "pick folder"), screens)
+    }
 
-        connected(folders = listOf("content://tree/1"))
+    @Test
+    fun rescansDoNotBlinkTheScreenThatIsAlreadyShowing() = runTest(dispatcher) {
+        val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
+        advanceUntilIdle()
+        // Nothing plugged in: repeated triggers (broadcasts, resume) change nothing visible.
+        repeat(3) { viewModel.onUsbChanged(); advanceUntilIdle() }
+        connected()
+        repeat(3) { viewModel.onUsbChanged(); advanceUntilIdle() }
+        connected(video)
+        repeat(3) { viewModel.onUsbChanged(); advanceUntilIdle() }
+        library.snapshot = LibrarySnapshot(false, emptyList())
         viewModel.onUsbChanged()
         advanceUntilIdle()
-        assertEquals(2 + AppViewModel.MAX_MOUNT_RETRIES, library.loads)
+        assertEquals(listOf("spinner", "plug in", "pick folder", "list", "plug in"), screens)
+    }
+
+    @Test
+    fun pluggingAKnownCameraInGoesFromThePromptToASpinnerToTheList() = runTest(dispatcher) {
+        library.snapshot = LibrarySnapshot(false, emptyList(), listOf("content://tree/1"))
+        val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
+        advanceUntilIdle()
+        connected(folders = listOf("content://tree/1"))
+        viewModel.onUsbChanged()
+        advanceTimeBy(AppViewModel.MOUNT_RETRY_MILLIS * 2 + 1)
+        // The system reports the attach more than once while the storage is still mounting.
+        viewModel.onUsbChanged()
+        advanceTimeBy(AppViewModel.MOUNT_RETRY_MILLIS)
+        connected(video, folders = listOf("content://tree/1"))
+        advanceUntilIdle()
+        assertEquals(listOf("spinner", "plug in", "spinner", "list"), screens)
+    }
+
+    @Test
+    fun unpluggingWhileWaitingStopsTheSpinner() = runTest(dispatcher) {
+        connected(folders = listOf("content://tree/1"))
+        val viewModel = AppViewModel(library, exports)
+        val screens = recordScreens(viewModel)
+        advanceTimeBy(AppViewModel.MOUNT_RETRY_MILLIS * 2 + 1)
+        library.snapshot = LibrarySnapshot(false, emptyList(), listOf("content://tree/1"))
+        advanceUntilIdle()
+        assertEquals(listOf("spinner", "plug in"), screens)
+        val loads = library.loads
+        advanceTimeBy(60_000)
+        assertEquals(loads, library.loads)
     }
 
     @Test

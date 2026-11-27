@@ -65,14 +65,19 @@ class AppViewModel(private val library: MediaLibrary, private val exports: Expor
         refreshJob = viewModelScope.launch {
             do {
                 refreshPending = false
-                // Keep showing current content during a rescan; the spinner is for an empty screen.
-                if (_state.value.items.isEmpty()) _state.update { it.copy(loading = true) }
+                // A rescan never blanks the screen: whatever is showing stays until the new
+                // result replaces it. The spinner belongs to the very first load, and to the
+                // wait for a known camera's storage (below), where it stays on steadily
+                // instead of blinking with every retry.
                 val snapshot = library.load()
                 val items = snapshot.items.map(::withDetails)
                 val ids = items.mapTo(HashSet()) { it.id }
+                // Android announces the USB device a few seconds before its storage is readable.
+                val waitingForStorage = snapshot.connected && items.isEmpty() &&
+                    snapshot.watchedFolders.isNotEmpty() && mountRetries < MAX_MOUNT_RETRIES
                 _state.update {
                     it.copy(
-                        usbConnected = snapshot.connected, loading = false, items = items,
+                        usbConnected = snapshot.connected, loading = waitingForStorage, items = items,
                         // Selections for media that vanished (cable pulled) must not linger.
                         selectedIds = it.selectedIds intersect ids,
                         watchedFolders = snapshot.watchedFolders,
@@ -83,9 +88,7 @@ class AppViewModel(private val library: MediaLibrary, private val exports: Expor
                     mountRetries = 0
                     loadVideoDetails()
                 }
-                // Android announces the USB device a few seconds before its storage is readable.
-                val state = _state.value
-                if (!refreshPending && state.canPickFolder && state.hasSavedFolder && mountRetries < MAX_MOUNT_RETRIES) {
+                if (!refreshPending && waitingForStorage) {
                     mountRetries++
                     delay(MOUNT_RETRY_MILLIS)
                     refreshPending = true

@@ -55,6 +55,9 @@ class MainActivity : ComponentActivity() {
     /** Bumped whenever a notification asks to land on the exports screen. */
     private var openExportsSignal by mutableIntStateOf(0)
 
+    /** Bumped whenever a camera is plugged in: that always lands on the media list. */
+    private var showBrowserSignal by mutableIntStateOf(0)
+
     override fun onCreate(savedInstanceState: Bundle?) {
         // Dark status bar icons over the light app bar (the platform draws edge to edge anyway).
         enableEdgeToEdge()
@@ -64,13 +67,16 @@ class MainActivity : ComponentActivity() {
         ) {
             requestPermissions(arrayOf(Manifest.permission.POST_NOTIFICATIONS), 1001)
         }
-        handleIntent(intent)
+        // A recreated activity (rotation) is handed its old intent again; only a fresh
+        // start counts as "the camera was just plugged in".
+        handleIntent(intent, fresh = savedInstanceState == null)
         val graph = AppGraph.get(this)
         setContent {
             HikkonukiTheme {
                 HikkonukiApp(
                     viewModel = viewModel(factory = AppViewModel.factory(graph.library, graph.exports)),
                     openExportsSignal = openExportsSignal,
+                    showBrowserSignal = showBrowserSignal,
                 )
             }
         }
@@ -79,10 +85,14 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
+        handleIntent(intent, fresh = true)
     }
 
-    private fun handleIntent(intent: Intent?) {
+    private fun handleIntent(intent: Intent?, fresh: Boolean) {
+        // Plugging a camera in brings back whatever screen the app was left on, which may
+        // be the exports screen of the previous session. The point of plugging in is to
+        // pick what to import, so go to the list.
+        if (fresh && intent?.action == UsbManager.ACTION_USB_DEVICE_ATTACHED) showBrowserSignal++
         if (intent?.getBooleanExtra(EXTRA_OPEN_EXPORTS, false) == true) {
             // Consume the extra so a later recreation does not navigate again.
             intent.removeExtra(EXTRA_OPEN_EXPORTS)
@@ -96,12 +106,16 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun HikkonukiApp(viewModel: AppViewModel, openExportsSignal: Int = 0) {
+fun HikkonukiApp(viewModel: AppViewModel, openExportsSignal: Int = 0, showBrowserSignal: Int = 0) {
     val navController = rememberNavController()
     val context = LocalContext.current
     val state by viewModel.state.collectAsStateWithLifecycle()
     val jobs by viewModel.exportJobs.collectAsStateWithLifecycle()
     val batches by viewModel.exportBatches.collectAsStateWithLifecycle()
+
+    LaunchedEffect(showBrowserSignal) {
+        if (showBrowserSignal > 0) navController.popBackStack(Routes.BROWSER, inclusive = false)
+    }
 
     LaunchedEffect(openExportsSignal) {
         if (openExportsSignal > 0) navController.navigate(Routes.EXPORTS) { launchSingleTop = true }
