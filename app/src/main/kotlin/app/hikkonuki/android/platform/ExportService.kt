@@ -51,7 +51,8 @@ class ExportService : Service() {
         usbDetached.register(this)
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(
-            NotificationChannel(CHANNEL_ID, "エクスポート", NotificationManager.IMPORTANCE_LOW).apply { description = "動画・写真のエクスポート進捗" },
+            NotificationChannel(CHANNEL_ID, getString(R.string.notification_channel), NotificationManager.IMPORTANCE_LOW)
+                .apply { description = getString(R.string.notification_channel_description) },
         )
         scope.launch {
             // Android drops notification updates that come faster than a few per second,
@@ -128,7 +129,10 @@ class ExportService : Service() {
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(android.R.drawable.stat_sys_upload)
             .setContentTitle(getString(R.string.app_name))
-            .setContentText(if (job != null) "${job.displayName} をエクスポート中 ${job.progressPercent}%" else "エクスポート待機中")
+            .setContentText(
+                if (job != null) getString(R.string.notification_exporting, job.displayName, job.progressPercent)
+                else getString(R.string.notification_waiting),
+            )
             .setContentIntent(openExports())
             .setOngoing(true)
             .setOnlyAlertOnce(true)
@@ -139,7 +143,7 @@ class ExportService : Service() {
                 Intent(this, ExportCancelReceiver::class.java).putExtra(ExportCancelReceiver.EXTRA_JOB_ID, job.id),
                 PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
             )
-            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, "キャンセル", cancel)
+            builder.addAction(android.R.drawable.ic_menu_close_clear_cancel, getString(R.string.cancel), cancel)
         }
         return builder.build()
     }
@@ -149,9 +153,9 @@ class ExportService : Service() {
         val (job, ending) = engine.lastEnded ?: return null
         val success = ending == ExportEngine.Ending.COMPLETED
         val text = when (ending) {
-            ExportEngine.Ending.COMPLETED -> "${job.displayName} のエクスポートが完了しました"
-            ExportEngine.Ending.FAILED -> "${job.displayName} のエクスポートに失敗しました"
-            ExportEngine.Ending.CANCELLED -> "${job.displayName} のエクスポートをキャンセルしました"
+            ExportEngine.Ending.COMPLETED -> getString(R.string.notification_completed, job.displayName)
+            ExportEngine.Ending.FAILED -> getString(R.string.notification_failed, job.displayName)
+            ExportEngine.Ending.CANCELLED -> getString(R.string.notification_cancelled, job.displayName)
         }
         return NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(if (success) android.R.drawable.stat_sys_upload_done else android.R.drawable.stat_notify_error)

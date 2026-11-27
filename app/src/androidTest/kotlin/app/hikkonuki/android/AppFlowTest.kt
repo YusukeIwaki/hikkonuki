@@ -65,7 +65,8 @@ class AppFlowTest {
         // Rows while it runs, then only the result.
         compose.onNodeWithTag("exportsList").assertIsDisplayed()
         compose.waitUntil(120_000) { compose.onAllNodesWithTag("exportsSummary").fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("2件中 2件成功").assertIsDisplayed()
+        // Worded in whatever language the device is set to.
+        compose.onNodeWithText(DeviceSupport.context.resources.getQuantityString(R.plurals.result_all_succeeded, 2, 2)).assertIsDisplayed()
 
         assertNotNull(DeviceSupport.published(photoName, MediaKind.PHOTO))
         val video = DeviceSupport.published("VID_20260510_132733_019_slim.mp4", MediaKind.VIDEO)!!

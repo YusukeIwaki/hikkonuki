@@ -162,7 +162,7 @@ class ExportPipelineTest {
         assertEquals("DJI", meta.tags["com.android.manufacturer"])
         assertTrue(retrieverDate(output.path)!!.startsWith("20261107T023403"))
         assertEquals(expected, output.dateTakenMillis)
-        assertTrue(job.detail!!.contains("2560×1440"))
+        assertTrue(job.detail!!.contains("2560x1440"))
         if (hevcEncoder(2560, 1440, CodecProfileLevel.HEVCProfileMain10)) {
             assertTrue("10-bit kept: ${job.detail}", job.detail!!.contains("10bit"))
         }

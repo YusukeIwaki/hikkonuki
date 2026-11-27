@@ -37,10 +37,16 @@ sealed interface VideoPlan {
     data class KeepOriginal(val reason: KeepReason) : VideoPlan
 }
 
-enum class KeepReason(val label: String) {
-    HDR("HDR/Log素材のため元動画のまま"),
-    LOW_SAVINGS("圧縮効果が小さいため元動画のまま"),
-    UNREADABLE("映像情報を読めないため元動画のまま"),
+/** Why a video is imported as the camera wrote it instead of being converted. */
+enum class KeepReason {
+    /** HDR or Log footage needs a colour-managed workflow this conversion does not do. */
+    HDR,
+    /** Re-encoding would not make the file at least 20% smaller. */
+    LOW_SAVINGS,
+    /** The video stream could not be read. */
+    UNREADABLE,
+    /** Every converter failed; the point is still to get the video onto the phone. */
+    CONVERSION_FAILED,
 }
 
 /**

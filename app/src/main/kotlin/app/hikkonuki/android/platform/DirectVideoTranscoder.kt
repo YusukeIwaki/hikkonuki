@@ -201,7 +201,7 @@ class DirectVideoTranscoder(private val source: AndroidSource, private val tenBi
             muxer.stop()
             val bits = if (tenBit) "10bit" else "8bit"
             val codec = if (encoderMime == MediaFormat.MIMETYPE_VIDEO_HEVC) "HEVC" else "H.264"
-            return String.format(Locale.US, "%d×%d ・ %s %s ・ %.0fMbps", spec.width, spec.height, codec, bits, spec.bitrateBps / 1e6)
+            return String.format(Locale.US, "%dx%d %s %s %.0fMbps", spec.width, spec.height, codec, bits, spec.bitrateBps / 1e6)
         }
 
         /** Range and matrix as the decoder reports them, else as the container declares. */

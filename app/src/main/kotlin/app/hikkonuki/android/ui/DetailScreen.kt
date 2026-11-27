@@ -32,7 +32,10 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import app.hikkonuki.android.R
 import androidx.compose.ui.unit.dp
 
 
@@ -82,17 +85,17 @@ fun DetailScreen(
                 title = { Text(current.displayName, maxLines = 1) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("detailBack")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     Box {
                         IconButton(onClick = { menuExpanded = true }, modifier = Modifier.testTag("detailMenu")) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "メニュー")
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu))
                         }
                         DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                             DropdownMenuItem(
-                                text = { Text("エクスポート") },
+                                text = { Text(stringResource(R.string.export)) },
                                 onClick = { menuExpanded = false; onExport(current) },
                                 leadingIcon = { Icon(Icons.Filled.Download, contentDescription = null) },
                             )
@@ -110,11 +113,11 @@ fun DetailScreen(
                     verticalArrangement = Arrangement.Center,
                 ) {
                     Text(
-                        "このメディアは読み込めません。USBが取り外された可能性があります。",
+                        stringResource(R.string.media_unavailable),
                         style = MaterialTheme.typography.bodyLarge,
                         modifier = Modifier.padding(24.dp),
                     )
-                    Text("戻って、USBを接続し直してください。", style = MaterialTheme.typography.bodyMedium)
+                    Text(stringResource(R.string.media_unavailable_hint), style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 HorizontalPager(
@@ -147,21 +150,24 @@ fun MetadataPanel(item: MediaItem) {
             .testTag("metadataPanel"),
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
-        Text("詳細", style = MaterialTheme.typography.titleMedium)
-        MetadataRow("ファイル名", item.displayName)
-        MetadataRow("撮影日時", formatDetailDate(item.dateTakenMillis))
-        MetadataRow("ファイルサイズ", formatSize(item.sizeBytes))
-        if (item.width > 0 && item.height > 0) MetadataRow("解像度", "${item.width} × ${item.height}")
-        if (item.isVideo) MetadataRow("長さ", formatDuration(item.durationMillis).ifEmpty { "不明" })
-        if (item.mimeType.isNotEmpty()) MetadataRow("形式", item.mimeType)
-        if (item.sourceLabel.isNotEmpty()) MetadataRow("保存元", item.sourceLabel)
+        Text(stringResource(R.string.details), style = MaterialTheme.typography.titleMedium)
+        MetadataRow("name", stringResource(R.string.file_name), item.displayName)
+        // The label already says what is unknown, so the value is just "Unknown".
+        val unknown = stringResource(R.string.unknown)
+        val locale = LocalConfiguration.current.locales[0]
+        MetadataRow("date", stringResource(R.string.date_taken), Formats.date(item.dateTakenMillis, locale, withSeconds = true) ?: unknown)
+        MetadataRow("size", stringResource(R.string.file_size), Formats.size(item.sizeBytes, locale) ?: unknown)
+        if (item.width > 0 && item.height > 0) MetadataRow("resolution", stringResource(R.string.resolution), "${item.width} × ${item.height}")
+        if (item.isVideo) MetadataRow("duration", stringResource(R.string.duration), formatDuration(item.durationMillis).ifEmpty { unknown })
+        if (item.mimeType.isNotEmpty()) MetadataRow("format", stringResource(R.string.format), Formats.fileType(item.displayName, item.mimeType))
+        if (item.sourceLabel.isNotEmpty()) MetadataRow("source", stringResource(R.string.source), item.sourceLabel)
     }
 }
 
 @Composable
-private fun MetadataRow(label: String, value: String) {
+private fun MetadataRow(key: String, label: String, value: String) {
     Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
         Text(label, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("metadata_$label"))
+        Text(value, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.testTag("metadata_$key"))
     }
 }

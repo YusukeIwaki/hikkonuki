@@ -83,7 +83,7 @@ class Media3VideoTranscoder(private val context: Context, private val source: An
                     poller.cancel()
                 }
                 val codec = if (videoMime == MimeTypes.VIDEO_H265) "HEVC" else "H.264"
-                String.format(Locale.US, "%d×%d ・ %s 8bit ・ %.0fMbps (互換モード)", spec.width, spec.height, codec, spec.bitrateBps / 1e6)
+                String.format(Locale.US, "%dx%d %s 8bit %.0fMbps (media3)", spec.width, spec.height, codec, spec.bitrateBps / 1e6)
             }
         }
 

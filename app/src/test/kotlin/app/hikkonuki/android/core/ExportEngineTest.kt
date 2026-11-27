@@ -168,7 +168,7 @@ class ExportEngineTest {
         engine.drain()
         val job = jobs(engine).single()
         assertEquals(ExportOutcome.ORIGINAL, job.outcome)
-        assertEquals(KeepReason.HDR.label, job.detail)
+        assertEquals(ExportEngine.keptDetail(KeepReason.HDR), job.detail)
         assertTrue(transcoder.calls.isEmpty())
         assertArrayEquals(source.files.getValue(request.sourceId), gallery.published.getValue(request.displayName).readBytes())
     }
@@ -192,7 +192,7 @@ class ExportEngineTest {
         engine.drain()
         val job = jobs(engine).single()
         assertEquals(ExportOutcome.ORIGINAL, job.outcome)
-        assertEquals(KeepReason.LOW_SAVINGS.label, job.detail)
+        assertEquals(ExportEngine.keptDetail(KeepReason.LOW_SAVINGS), job.detail)
         assertEquals(setOf(request.displayName), gallery.published.keys)
         assertTrue(gallery.pendingFiles.isEmpty())
     }
@@ -221,7 +221,7 @@ class ExportEngineTest {
         engine.drain()
         val job = jobs(engine).single()
         assertEquals(ExportOutcome.ORIGINAL, job.outcome)
-        assertEquals(KeepReason.UNREADABLE.label, job.detail)
+        assertEquals(ExportEngine.keptDetail(KeepReason.UNREADABLE), job.detail)
     }
 
     @Test
@@ -333,7 +333,7 @@ class ExportEngineTest {
 
     // ---- The camera is unplugged in the middle of an export ----
 
-    private val usbRemoved = ExportEngine.USB_REMOVED_MESSAGE
+    private val usbRemoved = FailureReason.USB_REMOVED
 
     private fun fourFiles() = listOf(
         photo("a.jpg"),
@@ -348,7 +348,7 @@ class ExportEngineTest {
             listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
             jobs(engine).map { it.status },
         )
-        assertEquals(listOf(null, null, usbRemoved, usbRemoved), jobs(engine).map { it.errorMessage })
+        assertEquals(listOf(null, null, usbRemoved, usbRemoved), jobs(engine).map { it.failure })
         val summary = batch(engine)
         assertEquals(BatchStatus.DONE, summary.status)
         assertEquals(Triple(4, 2, 2), Triple(summary.totalCount, summary.succeededCount, summary.failedCount))
@@ -404,7 +404,7 @@ class ExportEngineTest {
             listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
             jobs(engine).map { it.status },
         )
-        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.errorMessage })
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.failure })
         assertEquals(Triple(4, 2, 2), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
         assertEquals(BatchStatus.DONE, batch(engine).status)
         assertEquals(setOf("a.jpg", "b.jpg"), gallery.published.keys)
@@ -430,7 +430,7 @@ class ExportEngineTest {
         source.plugged = false
         engine.drain()
         assertEquals(List(4) { ExportStatus.FAILED }, jobs(engine).map { it.status })
-        assertEquals(List(4) { usbRemoved }, jobs(engine).map { it.errorMessage })
+        assertEquals(List(4) { usbRemoved }, jobs(engine).map { it.failure })
         assertEquals(Triple(4, 0, 4), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
         assertTrue(gallery.published.isEmpty())
         assertTrue(transcoder.calls.isEmpty())
@@ -514,7 +514,7 @@ class ExportEngineTest {
             listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
             jobs(engine).map { it.status },
         )
-        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.errorMessage })
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(engine).drop(2).map { it.failure })
         assertEquals(Triple(4, 2, 2), batch(engine).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
         assertEquals(setOf("a.jpg", "b.jpg"), gallery.published.keys)
         assertTrue(gallery.pendingFiles.isEmpty())
@@ -739,7 +739,7 @@ class ExportEngineTest {
             listOf(ExportStatus.COMPLETED, ExportStatus.COMPLETED, ExportStatus.FAILED, ExportStatus.FAILED),
             jobs(restarted).map { it.status },
         )
-        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.errorMessage })
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.failure })
         val summary = batch(restarted)
         assertEquals(BatchStatus.DONE, summary.status)
         assertEquals(Triple(4, 2, 2), Triple(summary.totalCount, summary.succeededCount, summary.failedCount))
@@ -762,7 +762,7 @@ class ExportEngineTest {
         restarted.sourceDisconnected()
         draining.join()
         assertEquals(Triple(4, 2, 2), batch(restarted).let { Triple(it.totalCount, it.succeededCount, it.failedCount) })
-        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.errorMessage })
+        assertEquals(listOf(usbRemoved, usbRemoved), jobs(restarted).drop(2).map { it.failure })
         assertTrue(gallery.pendingFiles.isEmpty())
     }
 
@@ -812,13 +812,13 @@ class ExportEngineTest {
         engine.drain()
         val failed = jobs(engine).single()
         assertEquals(ExportStatus.FAILED, failed.status)
-        assertEquals("スマートフォンの空き容量が足りません", failed.errorMessage)
+        assertEquals(FailureReason.NO_SPACE, failed.failure)
         assertEquals(Triple(BatchStatus.DONE, 1, 1), batch(engine).let { Triple(it.status, it.totalCount, it.failedCount) })
         gallery.free = Long.MAX_VALUE
         assertTrue(engine.enqueue(listOf(request)))
         engine.drain()
         assertEquals(ExportStatus.COMPLETED, jobs(engine).last().status)
-        assertNull(jobs(engine).last().errorMessage)
+        assertNull(jobs(engine).last().failure)
     }
 
     @Test
@@ -843,6 +843,8 @@ class ExportEngineTest {
         engine.drain()
         val failed = jobs(engine).single()
         assertEquals(ExportStatus.FAILED, failed.status)
+        // Not one of the named reasons: the system's own message is kept for display.
+        assertEquals(FailureReason.OTHER, failed.failure)
         assertEquals("read error", failed.errorMessage)
         assertTrue(gallery.pendingFiles.isEmpty())
     }
@@ -854,6 +856,7 @@ class ExportEngineTest {
         engine.enqueue(listOf(request.copy(sizeBytes = 9999)))
         engine.drain()
         assertEquals(ExportStatus.FAILED, jobs(engine).single().status)
+        assertEquals(FailureReason.INCOMPLETE_COPY, jobs(engine).single().failure)
         assertTrue(gallery.published.isEmpty())
         assertTrue(gallery.pendingFiles.isEmpty())
     }

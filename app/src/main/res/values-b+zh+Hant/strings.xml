@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 繁體中文 -->
+<resources>
+
+    <string name="back">返回</string>
+    <string name="menu">選單</string>
+    <string name="cancel">取消</string>
+    <string name="export">匯出</string>
+    <string name="unknown">不明</string>
+    <string name="unknown_date">日期不明</string>
+    <string name="unknown_size">大小不明</string>
+    <string name="joined">%1$s · %2$s</string>
+
+    <string name="connect_camera">請透過 USB 連接相機</string>
+    <string name="switch_to_list">切換至清單檢視</string>
+    <string name="switch_to_grid">切換至格狀檢視</string>
+    <string name="reload">重新載入</string>
+    <string name="export_status">匯出狀態</string>
+    <string name="open_usb_folder">選擇 USB 資料夾</string>
+    <string name="choose_another_usb_folder">選擇其他 USB 資料夾</string>
+    <string name="no_media_title">找不到相片或影片</string>
+    <string name="no_media_in_saved_folder_title">在上次選擇的資料夾中找不到相片或影片</string>
+    <string name="no_media_body">請選擇相機 DCIM 資料夾中存放相片和影片的資料夾。App 會記住您的選擇，下次自動載入。</string>
+    <string name="no_media_in_saved_folder_body">請檢查 USB 連線，或重新選擇 DCIM 資料夾中的資料夾。App 會記住您的選擇，下次自動載入。</string>
+    <string name="folder_permission_error">無法保留該資料夾的存取權限，請重新選擇資料夾。</string>
+
+    <string name="selected_count">已選取 %1$d 個項目</string>
+    <string name="item_selected">已選取</string>
+    <string name="clear_selection">取消選取</string>
+    <string name="select_all">全選</string>
+    <string name="export_count">匯出 (%1$d)</string>
+
+    <string name="media_unavailable">無法載入此檔案。USB 裝置可能已中斷連線。</string>
+    <string name="media_unavailable_hint">請返回上一頁，然後重新連接 USB 裝置。</string>
+    <string name="details">詳細資訊</string>
+    <string name="file_name">檔案名稱</string>
+    <string name="date_taken">拍攝時間</string>
+    <string name="file_size">檔案大小</string>
+    <string name="resolution">解析度</string>
+    <string name="duration">長度</string>
+    <string name="format">格式</string>
+    <string name="source">來源</string>
+
+    <string name="clear_history">清除記錄</string>
+    <string name="no_export_history">沒有匯出記錄</string>
+    <string name="export_result">匯出結果</string>
+    <plurals name="result_all_succeeded">
+        <item quantity="other">已成功匯出全部 %d 個檔案</item>
+    </plurals>
+    <string name="result_summary_with_failures">共 %1$d 個檔案，%2$d 個匯出成功，%3$d 個匯出失敗</string>
+    <string name="finished_at">完成時間：%1$s</string>
+    <string name="status_queued">等待中</string>
+    <string name="status_running">正在匯出 %1$d%%</string>
+    <string name="status_completed">已完成</string>
+    <string name="status_failed">失敗</string>
+
+    <string name="error_usb_removed">USB 裝置已中斷連線。請重新連接後再試一次。</string>
+    <string name="error_no_space">裝置儲存空間不足。</string>
+    <string name="error_incomplete_copy">檔案複製已中斷。</string>
+    <string name="error_empty_output">匯出的檔案沒有內容。</string>
+    <string name="error_destination_unavailable">無法在目標資料夾中建立檔案。</string>
+    <string name="error_unexpected">發生未預期的錯誤，請再試一次。</string>
+
+    <string name="notification_channel">匯出</string>
+    <string name="notification_channel_description">相片和影片的匯出進度</string>
+    <string name="notification_waiting">等待匯出</string>
+    <string name="notification_exporting">正在匯出 %1$s（%2$d%%）</string>
+    <string name="notification_completed">%1$s 匯出完成</string>
+    <string name="notification_failed">%1$s 匯出失敗</string>
+    <string name="notification_cancelled">%1$s 匯出已取消</string>
+</resources>

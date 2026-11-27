@@ -8,7 +8,7 @@ import android.hardware.usb.UsbManager
 import androidx.core.content.ContextCompat
 
 /**
- * Tells the export when the camera goes away, the same way OsmoPocketUsbShare does.
+ * Tells the export when the camera goes away.
  *
  * Two filters on purpose: an IntentFilter with a "file" data scheme never matches
  * ACTION_USB_DEVICE_DETACHED (it carries no data URI), so one combined filter would

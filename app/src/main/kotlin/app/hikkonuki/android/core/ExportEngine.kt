@@ -53,7 +53,8 @@ interface Gallery {
     fun availableBytes(): Long
 }
 
-class ExportException(message: String) : Exception(message)
+/** A failure the engine can name. [message] is technical detail for logs, in English. */
+class ExportException(val reason: FailureReason, message: String) : Exception(message)
 
 /** Tries each transcoder in order, so an unsupported fast path degrades instead of failing. */
 class FallbackTranscoder(private val candidates: List<VideoTranscoder>) : VideoTranscoder {
@@ -73,7 +74,7 @@ class FallbackTranscoder(private val candidates: List<VideoTranscoder>) : VideoT
                 onProgress(0f)
             }
         }
-        throw failure ?: ExportException("変換方法がありません")
+        throw failure ?: ExportException(FailureReason.OTHER, "no converter available")
     }
 }
 
@@ -132,7 +133,7 @@ class ExportEngine(
         queue.recover()
         runCatching { gallery.discardStale() }
         if (interrupted.any { !runCatching { source.exists(it.sourceId) }.getOrDefault(false) }) {
-            queue.failQueued(USB_REMOVED_MESSAGE)
+            queue.failQueued(FailureReason.USB_REMOVED)
         }
         // Also covers a process that died between the last file finishing and the summary.
         if (!queue.hasQueued()) queue.finalizeActiveBatch()
@@ -154,7 +155,7 @@ class ExportEngine(
      * a half-read file.
      */
     fun sourceDisconnected() {
-        queue.failQueued(USB_REMOVED_MESSAGE)
+        queue.failQueued(FailureReason.USB_REMOVED)
         val current = running
         if (current != null) {
             detached += current.first
@@ -212,7 +213,7 @@ class ExportEngine(
                         misses = if (withContext(io) { source.exists(job.sourceId) }) 0 else misses + 1
                         if (misses >= 2) {
                             sourceLost = true
-                            queue.failQueued(USB_REMOVED_MESSAGE)
+                            queue.failQueued(FailureReason.USB_REMOVED)
                             work.cancel()
                             break
                         }
@@ -242,12 +243,15 @@ class ExportEngine(
                     // the watchdog, or simply finding the source gone all mean "USB removed".
                     wasDetached || sourceLost || !runCatching { source.exists(job.sourceId) }.getOrDefault(false) ->
                         Ending.FAILED.also {
-                            queue.fail(job.id, USB_REMOVED_MESSAGE)
-                            queue.failQueued(USB_REMOVED_MESSAGE)
+                            queue.fail(job.id, FailureReason.USB_REMOVED)
+                            queue.failQueued(FailureReason.USB_REMOVED)
                         }
                     error is CancellationException -> Ending.CANCELLED.also { queue.requeue(job.id) }
                     else -> Ending.FAILED.also {
-                        queue.fail(job.id, error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName)
+                        queue.fail(
+                            job.id, (error as? ExportException)?.reason ?: FailureReason.OTHER,
+                            error.message?.takeIf { it.isNotBlank() } ?: error.javaClass.simpleName,
+                        )
                     }
                 }
             },
@@ -278,7 +282,7 @@ class ExportEngine(
         val date = CaptureDateResolver.resolve(camera, job.displayName, probed?.containerCreationMillis, zone(), now())
         val plan = probed?.let { SlimPlanner.plan(camera, it.info) } ?: VideoPlan.KeepOriginal(KeepReason.UNREADABLE)
 
-        var keepReason = (plan as? VideoPlan.KeepOriginal)?.reason?.label
+        var keepReason = (plan as? VideoPlan.KeepOriginal)?.reason?.let(::keptDetail)
         if (plan is VideoPlan.Transcode) {
             val spec = plan.spec
             requireSpace(spec.bitrateBps.toLong() * spec.durationMillis / 8000 * 11 / 10)
@@ -286,7 +290,7 @@ class ExportEngine(
             try {
                 val description = transcoder.transcode(job.sourceId, spec, pending.file, onProgress)
                 currentCoroutineContext().ensureActive()
-                if (pending.file.length() <= 0) throw ExportException("出力ファイルが空です")
+                if (pending.file.length() <= 0) throw ExportException(FailureReason.EMPTY_OUTPUT, "converter wrote an empty file")
                 if (SlimPlanner.savesEnough(job.sourceSizeBytes, pending.file.length())) {
                     date?.let {
                         Mp4Stamper.stamp(
@@ -297,7 +301,7 @@ class ExportEngine(
                     return Done(ExportOutcome.CONVERTED, pending.publish(), description)
                 }
                 pending.discard()
-                keepReason = KeepReason.LOW_SAVINGS.label
+                keepReason = keptDetail(KeepReason.LOW_SAVINGS)
             } catch (e: CancellationException) {
                 pending.discard()
                 throw e
@@ -305,7 +309,7 @@ class ExportEngine(
                 pending.discard()
                 // Converting failed, but the point is to get the video onto the phone.
                 if (!source.exists(job.sourceId)) throw e
-                keepReason = "変換できなかったため元動画のまま (${shortReason(e)})"
+                keepReason = keptDetail(KeepReason.CONVERSION_FAILED) + " (${shortReason(e)})"
             }
             onProgress(0f)
         }
@@ -317,7 +321,7 @@ class ExportEngine(
     private fun requireSpace(neededBytes: Long) {
         val available = runCatching { gallery.availableBytes() }.getOrDefault(Long.MAX_VALUE)
         if (available < neededBytes + 64L * 1024 * 1024) {
-            throw ExportException("スマートフォンの空き容量が足りません")
+            throw ExportException(FailureReason.NO_SPACE, "needs $neededBytes bytes, $available available")
         }
     }
 
@@ -340,7 +344,7 @@ class ExportEngine(
                 }
             }
             if (job.sourceSizeBytes > 0 && pending.file.length() != job.sourceSizeBytes) {
-                throw ExportException("コピーが途中で終わりました")
+                throw ExportException(FailureReason.INCOMPLETE_COPY, "copied ${pending.file.length()} of ${job.sourceSizeBytes} bytes")
             }
             if (date != null && job.kind == MediaKind.VIDEO) {
                 runCatching { Mp4Stamper.stamp(pending.file, Mp4Stamper.Stamp(date.epochMillis, date.utcOffsetSeconds), writeTags = false) }
@@ -353,7 +357,8 @@ class ExportEngine(
     }
 
     companion object {
-        const val USB_REMOVED_MESSAGE = "USBが取り外されました。接続し直して再度エクスポートしてください。"
+        /** The note stored with an import that kept the original: a record, not UI text. */
+        fun keptDetail(reason: KeepReason): String = "original kept: ${reason.name}"
 
         /** Codec errors can run to a page of format dumps; the list only needs the gist. */
         internal fun shortReason(error: Throwable): String {

@@ -34,6 +34,21 @@ data class ExportBatch(
     val updatedAtMillis: Long = 0,
 )
 
+/**
+ * Why an export failed, as a code rather than a sentence: the row outlives the moment it
+ * was written, and the screen that shows it may be in another language by then.
+ */
+enum class FailureReason {
+    /** The camera was unplugged or its storage unmounted. */
+    USB_REMOVED,
+    NO_SPACE,
+    INCOMPLETE_COPY,
+    EMPTY_OUTPUT,
+    DESTINATION_UNAVAILABLE,
+    /** Anything else; [ExportJob.errorMessage] carries the technical detail. */
+    OTHER,
+}
+
 data class ExportJob(
     val id: Long = 0,
     val batchId: Long = 0,
@@ -48,6 +63,8 @@ data class ExportJob(
     val outcome: ExportOutcome? = null,
     /** Human readable note: what was produced, or why the original was kept. */
     val detail: String? = null,
+    val failure: FailureReason? = null,
+    /** Technical detail of a failure, as reported by the system. Not localized. */
     val errorMessage: String? = null,
     val createdAtMillis: Long = 0,
     val updatedAtMillis: Long = 0,
@@ -193,7 +210,7 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
 
     fun hasQueued(): Boolean = nextQueued() != null
 
-    fun markRunning(id: Long) = replace(id) { it.copy(status = ExportStatus.RUNNING, progressPercent = 0, errorMessage = null) }
+    fun markRunning(id: Long) = replace(id) { it.copy(status = ExportStatus.RUNNING, progressPercent = 0, failure = null, errorMessage = null) }
 
     fun setProgress(id: Long, percent: Int) {
         val clamped = percent.coerceIn(0, 100)
@@ -205,16 +222,18 @@ class ExportQueue(private val persistence: JobPersistence, private val now: () -
     fun complete(id: Long, outcome: ExportOutcome, outputUri: String, outputSizeBytes: Long, detail: String?) = replace(id) {
         it.copy(
             status = ExportStatus.COMPLETED, progressPercent = 100, outcome = outcome,
-            outputUri = outputUri, outputSizeBytes = outputSizeBytes, detail = detail, errorMessage = null,
+            outputUri = outputUri, outputSizeBytes = outputSizeBytes, detail = detail, failure = null, errorMessage = null,
         )
     }
 
-    fun fail(id: Long, message: String) = replace(id) { it.copy(status = ExportStatus.FAILED, progressPercent = 0, errorMessage = message) }
+    fun fail(id: Long, reason: FailureReason, message: String? = null) = replace(id) {
+        it.copy(status = ExportStatus.FAILED, progressPercent = 0, failure = reason, errorMessage = message)
+    }
 
     /** Fails every waiting row at once, with one cause, instead of each starting and failing in turn. */
-    fun failQueued(message: String): Int = synchronized(lock) {
+    fun failQueued(reason: FailureReason): Int = synchronized(lock) {
         val queued = state.value.filter { it.status == ExportStatus.QUEUED }
-        queued.forEach { fail(it.id, message) }
+        queued.forEach { fail(it.id, reason) }
         queued.size
     }
 

@@ -1,3 +1,82 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- English is the default. Translations: values-ja, values-zh (Simplified), values-b+zh+Hant (Traditional), values-ko.
+         The language follows the device, or the per-app language chosen in system settings (xml/locales_config.xml). -->
 <resources>
-    <string name="app_name">Hikkonuki</string>
+    <!-- The product name: never translated. -->
+    <string name="app_name" translatable="false">Hikkonuki</string>
+
+    <!-- Common -->
+    <string name="back">Back</string>
+    <string name="menu">Menu</string>
+    <string name="cancel">Cancel</string>
+    <string name="export">Export</string>
+    <string name="unknown">Unknown</string>
+    <string name="unknown_date">Unknown date</string>
+    <string name="unknown_size">Unknown size</string>
+    <string name="joined">%1$s · %2$s</string>
+
+    <!-- Media list -->
+    <string name="connect_camera">Connect a camera via USB</string>
+    <string name="switch_to_list">Switch to list view</string>
+    <string name="switch_to_grid">Switch to grid view</string>
+    <string name="reload">Reload</string>
+    <string name="export_status">Export status</string>
+    <string name="open_usb_folder">Select USB folder</string>
+    <string name="choose_another_usb_folder">Select another USB folder</string>
+    <string name="no_media_title">No photos or videos found</string>
+    <string name="no_media_in_saved_folder_title">No photos or videos found in the selected folder</string>
+    <string name="no_media_body">Select the folder containing your photos and videos inside the camera\'s DCIM folder. The app will remember your selection and load it automatically next time.</string>
+    <string name="no_media_in_saved_folder_body">Check the USB connection or select a folder inside DCIM again. The app will remember your selection and load it automatically next time.</string>
+    <string name="folder_permission_error">Couldn\'t retain access to the folder. Please select the folder again.</string>
+
+    <!-- Selection -->
+    <string name="selected_count">%1$d selected</string>
+    <string name="item_selected">Selected</string>
+    <string name="clear_selection">Clear selection</string>
+    <string name="select_all">Select all</string>
+    <string name="export_count">Export (%1$d)</string>
+
+    <!-- Detail screen -->
+    <string name="media_unavailable">Couldn\'t load this file. The USB device may have been disconnected.</string>
+    <string name="media_unavailable_hint">Go back and reconnect the USB device.</string>
+    <string name="details">Details</string>
+    <string name="file_name">File name</string>
+    <string name="date_taken">Date taken</string>
+    <string name="file_size">File size</string>
+    <string name="resolution">Resolution</string>
+    <string name="duration">Duration</string>
+    <string name="format">Format</string>
+    <string name="source">Source</string>
+
+    <!-- Export status screen -->
+    <string name="clear_history">Clear history</string>
+    <string name="no_export_history">No export history</string>
+    <string name="export_result">Export summary</string>
+    <plurals name="result_all_succeeded">
+        <item quantity="one">%d file exported</item>
+        <item quantity="other">All %d files exported</item>
+    </plurals>
+    <string name="result_summary_with_failures">%2$d of %1$d files exported, %3$d failed</string>
+    <string name="finished_at">Finished: %1$s</string>
+    <string name="status_queued">Waiting</string>
+    <string name="status_running">Exporting %1$d%%</string>
+    <string name="status_completed">Done</string>
+    <string name="status_failed">Failed</string>
+
+    <!-- Why an export failed -->
+    <string name="error_usb_removed">The USB device was disconnected. Reconnect it and try again.</string>
+    <string name="error_no_space">Not enough storage space on your device.</string>
+    <string name="error_incomplete_copy">The file couldn\'t be copied completely.</string>
+    <string name="error_empty_output">The exported file is empty.</string>
+    <string name="error_destination_unavailable">Couldn\'t create the file in the destination folder.</string>
+    <string name="error_unexpected">An unexpected error occurred. Please try again.</string>
+
+    <!-- Notifications -->
+    <string name="notification_channel">Export</string>
+    <string name="notification_channel_description">Progress of photo and video exports</string>
+    <string name="notification_waiting">Waiting to export</string>
+    <string name="notification_exporting">Exporting %1$s (%2$d%%)</string>
+    <string name="notification_completed">Exported %1$s</string>
+    <string name="notification_failed">Couldn\'t export %1$s</string>
+    <string name="notification_cancelled">Export of %1$s canceled</string>
 </resources>

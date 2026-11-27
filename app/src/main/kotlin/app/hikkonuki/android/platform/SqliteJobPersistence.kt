@@ -9,11 +9,12 @@ import app.hikkonuki.android.core.ExportBatch
 import app.hikkonuki.android.core.ExportJob
 import app.hikkonuki.android.core.ExportOutcome
 import app.hikkonuki.android.core.ExportStatus
+import app.hikkonuki.android.core.FailureReason
 import app.hikkonuki.android.core.JobPersistence
 import app.hikkonuki.android.core.MediaKind
 
 class SqliteJobPersistence(context: Context, name: String? = "exports.db") :
-    SQLiteOpenHelper(context, name, null, 2), JobPersistence {
+    SQLiteOpenHelper(context, name, null, 3), JobPersistence {
 
     override fun onCreate(db: SQLiteDatabase) {
         db.execSQL(
@@ -30,6 +31,7 @@ class SqliteJobPersistence(context: Context, name: String? = "exports.db") :
               output_size INTEGER NOT NULL DEFAULT 0,
               outcome TEXT,
               detail TEXT,
+              failure TEXT,
               error TEXT,
               created_at INTEGER NOT NULL,
               updated_at INTEGER NOT NULL
@@ -76,6 +78,7 @@ class SqliteJobPersistence(context: Context, name: String? = "exports.db") :
                     outputSizeBytes = long("output_size"),
                     outcome = text("outcome")?.let(ExportOutcome::valueOf),
                     detail = text("detail"),
+                    failure = text("failure")?.let(FailureReason::valueOf),
                     errorMessage = text("error"),
                     createdAtMillis = long("created_at"),
                     updatedAtMillis = long("updated_at"),
@@ -96,6 +99,7 @@ class SqliteJobPersistence(context: Context, name: String? = "exports.db") :
         put("output_size", job.outputSizeBytes)
         put("outcome", job.outcome?.name)
         put("detail", job.detail)
+        put("failure", job.failure?.name)
         put("error", job.errorMessage)
         put("created_at", job.createdAtMillis)
         put("updated_at", job.updatedAtMillis)

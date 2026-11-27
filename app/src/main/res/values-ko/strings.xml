@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- 한국어 -->
+<resources>
+
+    <string name="back">뒤로</string>
+    <string name="menu">메뉴</string>
+    <string name="cancel">취소</string>
+    <string name="export">내보내기</string>
+    <string name="unknown">알 수 없음</string>
+    <string name="unknown_date">날짜 알 수 없음</string>
+    <string name="unknown_size">크기 알 수 없음</string>
+    <string name="joined">%1$s · %2$s</string>
+
+    <string name="connect_camera">USB로 카메라를 연결하세요</string>
+    <string name="switch_to_list">목록 보기로 전환</string>
+    <string name="switch_to_grid">그리드 보기로 전환</string>
+    <string name="reload">새로고침</string>
+    <string name="export_status">내보내기 상태</string>
+    <string name="open_usb_folder">USB 폴더 선택</string>
+    <string name="choose_another_usb_folder">다른 USB 폴더 선택</string>
+    <string name="no_media_title">사진이나 동영상을 찾을 수 없습니다</string>
+    <string name="no_media_in_saved_folder_title">이전에 선택한 폴더에서 사진이나 동영상을 찾을 수 없습니다</string>
+    <string name="no_media_body">카메라의 DCIM 폴더에서 사진과 동영상이 저장된 폴더를 선택하세요. 앱이 선택한 폴더를 기억해 다음부터 자동으로 불러옵니다.</string>
+    <string name="no_media_in_saved_folder_body">USB 연결을 확인하거나 DCIM 폴더에서 다시 선택하세요. 앱이 선택한 폴더를 기억해 다음부터 자동으로 불러옵니다.</string>
+    <string name="folder_permission_error">폴더 접근 권한을 유지할 수 없습니다. 폴더를 다시 선택해 주세요.</string>
+
+    <string name="selected_count">%1$d개 선택됨</string>
+    <string name="item_selected">선택됨</string>
+    <string name="clear_selection">선택 해제</string>
+    <string name="select_all">모두 선택</string>
+    <string name="export_count">내보내기 (%1$d)</string>
+
+    <string name="media_unavailable">파일을 불러올 수 없습니다. USB 기기의 연결이 끊어졌을 수 있습니다.</string>
+    <string name="media_unavailable_hint">이전 화면으로 돌아가 USB 기기를 다시 연결하세요.</string>
+    <string name="details">상세 정보</string>
+    <string name="file_name">파일 이름</string>
+    <string name="date_taken">촬영 일시</string>
+    <string name="file_size">파일 크기</string>
+    <string name="resolution">해상도</string>
+    <string name="duration">길이</string>
+    <string name="format">형식</string>
+    <string name="source">원본 위치</string>
+
+    <string name="clear_history">기록 지우기</string>
+    <string name="no_export_history">내보내기 기록이 없습니다</string>
+    <string name="export_result">내보내기 결과</string>
+    <plurals name="result_all_succeeded">
+        <item quantity="other">파일 %d개 모두 내보내기 완료</item>
+    </plurals>
+    <string name="result_summary_with_failures">파일 %1$d개 중 %2$d개 내보내기 성공, %3$d개 실패</string>
+    <string name="finished_at">완료 일시: %1$s</string>
+    <string name="status_queued">대기 중</string>
+    <string name="status_running">내보내는 중 %1$d%%</string>
+    <string name="status_completed">완료</string>
+    <string name="status_failed">실패</string>
+
+    <string name="error_usb_removed">USB 기기의 연결이 끊어졌습니다. 다시 연결한 후 재시도해 주세요.</string>
+    <string name="error_no_space">기기의 저장 공간이 부족합니다.</string>
+    <string name="error_incomplete_copy">파일 복사가 중단되었습니다.</string>
+    <string name="error_empty_output">내보낸 파일이 비어 있습니다.</string>
+    <string name="error_destination_unavailable">저장할 폴더에 파일을 만들 수 없습니다.</string>
+    <string name="error_unexpected">예기치 않은 오류가 발생했습니다. 다시 시도해 주세요.</string>
+
+    <string name="notification_channel">내보내기</string>
+    <string name="notification_channel_description">사진 및 동영상 내보내기 진행 상황</string>
+    <string name="notification_waiting">내보내기 대기 중</string>
+    <string name="notification_exporting">%1$s 내보내는 중 (%2$d%%)</string>
+    <string name="notification_completed">%1$s 내보내기 완료</string>
+    <string name="notification_failed">%1$s 내보내기 실패</string>
+    <string name="notification_cancelled">%1$s 내보내기 취소</string>
+</resources>

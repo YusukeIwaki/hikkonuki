@@ -6,6 +6,7 @@ import app.hikkonuki.android.core.ExportOutcome
 import app.hikkonuki.android.core.ExportQueue
 import app.hikkonuki.android.core.ExportRequest
 import app.hikkonuki.android.core.ExportStatus
+import app.hikkonuki.android.core.FailureReason
 import app.hikkonuki.android.core.MediaKind
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
@@ -31,7 +32,7 @@ class SqliteJobPersistenceTest {
         queue.markRunning(a.id)
         queue.complete(a.id, ExportOutcome.CONVERTED, "content://media/1", 87_296_455, "2560×1440 ・ HEVC 10bit ・ 14Mbps")
         queue.markRunning(b.id)
-        queue.fail(b.id, "スマートフォンの空き容量が足りません")
+        queue.fail(b.id, FailureReason.NO_SPACE, "needs 5 bytes, 1 available")
 
         val reopened = ExportQueue(persistence()) { 1234L }
         assertEquals(queue.jobs.value, reopened.jobs.value)

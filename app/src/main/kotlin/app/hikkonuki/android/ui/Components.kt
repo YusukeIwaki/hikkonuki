@@ -24,13 +24,16 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.stringResource
+import app.hikkonuki.android.R
 import androidx.compose.ui.platform.testTag
 import app.hikkonuki.android.core.MediaKind
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import java.io.File
-import java.text.SimpleDateFormat
+import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
 
@@ -183,23 +186,54 @@ private fun decodeSampled(context: android.content.Context, uri: Uri, path: Stri
     }.getOrNull()
 }
 
-private val dateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm", Locale.JAPAN)
-private val detailDateFormat = SimpleDateFormat("yyyy/MM/dd HH:mm:ss", Locale.JAPAN)
-
-fun formatDate(millis: Long?): String = if (millis == null || millis <= 0) "日時不明" else dateFormat.format(Date(millis))
-fun formatDetailDate(millis: Long?): String = if (millis == null || millis <= 0) "日時不明" else detailDateFormat.format(Date(millis))
-
-fun formatSize(bytes: Long): String {
-    if (bytes <= 0) return "サイズ不明"
-    val units = listOf("B", "KB", "MB", "GB", "TB")
-    var value = bytes.toDouble()
-    var unit = 0
-    while (value >= 1024 && unit < units.lastIndex) {
-        value /= 1024
-        unit++
+/**
+ * Numbers and dates the way the given locale writes them. Kept free of Android resources
+ * so they can be called (and tested) anywhere; "unknown" is a null for the caller to word.
+ */
+object Formats {
+    fun date(millis: Long?, locale: Locale, withSeconds: Boolean = false): String? {
+        if (millis == null || millis <= 0) return null
+        val timeStyle = if (withSeconds) DateFormat.MEDIUM else DateFormat.SHORT
+        return DateFormat.getDateTimeInstance(DateFormat.MEDIUM, timeStyle, locale).format(Date(millis))
     }
-    return if (unit == 0) "${bytes} B" else String.format(Locale.JAPAN, "%.1f %s", value, units[unit])
+
+    fun size(bytes: Long, locale: Locale): String? {
+        if (bytes <= 0) return null
+        val units = listOf("B", "KB", "MB", "GB", "TB")
+        var value = bytes.toDouble()
+        var unit = 0
+        while (value >= 1024 && unit < units.lastIndex) {
+            value /= 1024
+            unit++
+        }
+        return if (unit == 0) "$bytes B" else String.format(locale, "%.1f %s", value, units[unit])
+    }
+
+    /** "JPEG", "MP4": the name people know a file type by, rather than its MIME type. */
+    fun fileType(displayName: String, mimeType: String): String = when (displayName.substringAfterLast('.', "").lowercase()) {
+        "jpg", "jpeg" -> "JPEG"
+        "png" -> "PNG"
+        "heic" -> "HEIC"
+        "dng" -> "DNG"
+        "mp4" -> "MP4"
+        "mov" -> "MOV"
+        else -> mimeType
+    }
 }
+
+/** The locale the screen is being shown in: the device's, or the per-app language. */
+@Composable
+private fun currentLocale(): Locale = LocalConfiguration.current.locales[0]
+
+@Composable
+fun formatDate(millis: Long?): String = Formats.date(millis, currentLocale()) ?: stringResource(R.string.unknown_date)
+
+@Composable
+fun formatDetailDate(millis: Long?): String =
+    Formats.date(millis, currentLocale(), withSeconds = true) ?: stringResource(R.string.unknown_date)
+
+@Composable
+fun formatSize(bytes: Long): String = Formats.size(bytes, currentLocale()) ?: stringResource(R.string.unknown_size)
 
 fun formatDuration(millis: Long?): String {
     if (millis == null || millis <= 0) return ""
@@ -207,6 +241,6 @@ fun formatDuration(millis: Long?): String {
     val hours = totalSeconds / 3600
     val minutes = (totalSeconds % 3600) / 60
     val seconds = totalSeconds % 60
-    return if (hours > 0) String.format(Locale.JAPAN, "%d:%02d:%02d", hours, minutes, seconds)
-    else String.format(Locale.JAPAN, "%d:%02d", minutes, seconds)
+    return if (hours > 0) String.format(Locale.ROOT, "%d:%02d:%02d", hours, minutes, seconds)
+    else String.format(Locale.ROOT, "%d:%02d", minutes, seconds)
 }

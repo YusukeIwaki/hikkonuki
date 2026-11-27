@@ -9,6 +9,7 @@ import android.os.Environment
 import android.os.StatFs
 import android.provider.MediaStore
 import app.hikkonuki.android.core.ExportException
+import app.hikkonuki.android.core.FailureReason
 import app.hikkonuki.android.core.Gallery
 import app.hikkonuki.android.core.GalleryEntry
 import app.hikkonuki.android.core.MediaKind
@@ -48,7 +49,7 @@ class MediaStoreGallery(private val context: Context) : Gallery {
             put(MediaStore.MediaColumns.RELATIVE_PATH, RELATIVE_PATH)
             put(MediaStore.MediaColumns.IS_PENDING, 1)
         }
-        val uri = resolver.insert(collection(kind), values) ?: throw ExportException("保存先を作成できませんでした")
+        val uri = resolver.insert(collection(kind), values) ?: throw ExportException(FailureReason.DESTINATION_UNAVAILABLE, "MediaStore insert returned null")
         val path = resolver.query(uri, arrayOf(MediaStore.MediaColumns.DATA), null, null, null)?.use { cursor ->
             if (cursor.moveToFirst()) cursor.getString(0) else null
         }
@@ -57,7 +58,7 @@ class MediaStoreGallery(private val context: Context) : Gallery {
         val created = path != null && runCatching { resolver.openFileDescriptor(uri, "w")?.use { true } }.getOrNull() == true
         if (path == null || !created) {
             resolver.delete(uri, null, null)
-            throw ExportException("保存先を開けませんでした")
+            throw ExportException(FailureReason.DESTINATION_UNAVAILABLE, "pending file could not be created")
         }
         return object : PendingEntry {
             override val file = File(path)

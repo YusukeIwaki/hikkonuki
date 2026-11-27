@@ -51,7 +51,7 @@ class ExportQueueTest {
         assertFalse(queue.finalizeActiveBatch())
         queue.jobs.value.forEach { queue.markRunning(it.id) }
         queue.complete(queue.jobs.value[0].id, ExportOutcome.CONVERTED, "out://a", 10, null)
-        queue.fail(queue.jobs.value[1].id, "boom")
+        queue.fail(queue.jobs.value[1].id, FailureReason.OTHER, "boom")
         assertTrue(queue.finalizeActiveBatch())
         assertTrue(queue.jobs.value.isEmpty())
         assertTrue(persistence.rows.isEmpty())
@@ -124,11 +124,12 @@ class ExportQueueTest {
         queue.enqueue(listOf(request("a.mp4"), request("b.mp4")))
         val a = queue.nextQueued()!!
         queue.markRunning(a.id)
-        queue.fail(a.id, "boom")
+        queue.fail(a.id, FailureReason.OTHER, "boom")
         assertEquals(1, queue.enqueue(listOf(request("a.mp4"))))
         val again = queue.jobs.value.single { it.displayName == "a.mp4" }
         assertEquals(ExportStatus.QUEUED, again.status)
         assertNull(again.errorMessage)
+        assertNull(again.failure)
     }
 
     @Test
@@ -165,13 +166,13 @@ class ExportQueueTest {
         val (a, b, c, d) = queue.jobs.value
         queue.markRunning(a.id); queue.complete(a.id, ExportOutcome.COPIED, "out://a", 1, null)
         queue.markRunning(b.id)
-        assertEquals(2, queue.failQueued("gone"))
+        assertEquals(2, queue.failQueued(FailureReason.USB_REMOVED))
         assertEquals(
             listOf(ExportStatus.COMPLETED, ExportStatus.RUNNING, ExportStatus.FAILED, ExportStatus.FAILED),
             queue.jobs.value.map { it.status },
         )
-        assertEquals(listOf("gone", "gone"), listOf(c, d).map { persistence.rows.getValue(it.id).errorMessage })
-        assertEquals(0, queue.failQueued("gone"))
+        assertEquals(List(2) { FailureReason.USB_REMOVED }, listOf(c, d).map { persistence.rows.getValue(it.id).failure })
+        assertEquals(0, queue.failQueued(FailureReason.USB_REMOVED))
     }
 
     @Test

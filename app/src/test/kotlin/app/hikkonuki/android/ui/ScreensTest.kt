@@ -18,7 +18,7 @@ import androidx.compose.ui.test.performTouchInput
 import app.hikkonuki.android.HikkonukiApp
 import app.hikkonuki.android.core.BatchStatus
 import app.hikkonuki.android.core.ExportBatch
-import app.hikkonuki.android.core.ExportEngine
+import app.hikkonuki.android.core.FailureReason
 import app.hikkonuki.android.core.ExportJob
 import app.hikkonuki.android.core.ExportOutcome
 import app.hikkonuki.android.core.ExportStatus
@@ -31,9 +31,12 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
-@Config(qualifiers = "w411dp-h891dp-xxhdpi")
+// Run in Japanese: the wording asserted here is the Japanese translation. English (the
+// default) and the other languages are covered by LocalizationTest.
+@Config(qualifiers = "ja-w411dp-h891dp-xxhdpi")
 class ScreensTest {
     @get:Rule
     val compose = createComposeRule()
@@ -297,7 +300,7 @@ class ScreensTest {
     fun listLayoutShowsSizeAndDate() {
         browser(loaded(video).copy(layout = BrowserLayout.LIST))
         compose.onNodeWithTag("mediaList").assertIsDisplayed()
-        compose.onNodeWithText("209.7 MB ・ ${formatDate(video.dateTakenMillis)}").assertIsDisplayed()
+        compose.onNodeWithText("209.7 MB ・ ${Formats.date(video.dateTakenMillis, Locale.JAPAN)}").assertIsDisplayed()
     }
 
     private fun job(id: Long, name: String, status: ExportStatus) =
@@ -319,8 +322,9 @@ class ScreensTest {
                 job(1, "a.mp4", ExportStatus.COMPLETED).copy(outcome = ExportOutcome.CONVERTED, outputSizeBytes = 87_296_455),
                 job(2, "b.mp4", ExportStatus.RUNNING).copy(progressPercent = 37),
                 job(3, "c.mp4", ExportStatus.QUEUED),
-                job(4, "d.mp4", ExportStatus.FAILED).copy(errorMessage = "スマートフォンの空き容量が足りません"),
-                job(5, "e.mp4", ExportStatus.FAILED).copy(errorMessage = ExportEngine.USB_REMOVED_MESSAGE),
+                job(4, "d.mp4", ExportStatus.FAILED).copy(failure = FailureReason.NO_SPACE, errorMessage = "needs 5 bytes"),
+                job(5, "e.mp4", ExportStatus.FAILED).copy(failure = FailureReason.USB_REMOVED),
+                job(6, "f.mp4", ExportStatus.FAILED).copy(failure = FailureReason.OTHER, errorMessage = "read error"),
             ),
             ExportBatch(1, BatchStatus.ACTIVE),
         )
@@ -329,7 +333,12 @@ class ScreensTest {
         compose.onNodeWithText("83.3 MB ・ DCIM/Hikkonuki").assertIsDisplayed()
         compose.onNodeWithText("エクスポート中 37%").assertIsDisplayed()
         compose.onNodeWithTag("exportProgress_2").assertIsDisplayed()
-        compose.onAllNodesWithText("失敗").assertCountEquals(2)
+        compose.onAllNodesWithText("失敗").assertCountEquals(3)
+        // A named reason is worded for the reader, never shown as the raw detail.
+        compose.onAllNodesWithText("needs 5 bytes").assertCountEquals(0)
+        // An unclassified failure gets a general explanation, with the system's report below it.
+        compose.onNodeWithText("予期しないエラーが発生しました。もう一度お試しください。").assertExists()
+        compose.onNodeWithTag("failureDetail_6", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("スマートフォンの空き容量が足りません").assertIsDisplayed()
         compose.onNodeWithText("USBが取り外されました。接続し直して再度エクスポートしてください。").assertIsDisplayed()
         compose.onNodeWithText("待機中").assertIsDisplayed()
@@ -348,7 +357,7 @@ class ScreensTest {
         compose.onNodeWithTag("exportsSummary").assertIsDisplayed()
         compose.onNodeWithText("エクスポート結果").assertIsDisplayed()
         compose.onNodeWithText("5件中 4件成功、1件失敗").assertIsDisplayed()
-        compose.onNodeWithText("完了日時: ${formatDetailDate(1_780_000_000_000)}").assertIsDisplayed()
+        compose.onNodeWithText("完了日時: ${Formats.date(1_780_000_000_000, Locale.JAPAN, withSeconds = true)}").assertIsDisplayed()
         compose.onAllNodesWithTag("exportsList").assertCountEquals(0)
         compose.onNodeWithTag("clearExportHistory").assertIsDisplayed()
     }

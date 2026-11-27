@@ -23,11 +23,15 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import app.hikkonuki.android.R
 import androidx.compose.ui.unit.dp
 import app.hikkonuki.android.core.BatchStatus
 import app.hikkonuki.android.core.ExportBatch
 import app.hikkonuki.android.core.ExportJob
 import app.hikkonuki.android.core.ExportStatus
+import app.hikkonuki.android.core.FailureReason
 import app.hikkonuki.android.platform.MediaStoreGallery
 
 /**
@@ -47,16 +51,16 @@ fun ExportsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("エクスポート状況") },
+                title = { Text(stringResource(R.string.export_status)) },
                 navigationIcon = {
                     IconButton(onClick = onBack, modifier = Modifier.testTag("exportsBack")) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "戻る")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.back))
                     }
                 },
                 actions = {
                     if (batch != null) {
                         TextButton(onClick = onClearHistory, modifier = Modifier.testTag("clearExportHistory")) {
-                            Text("履歴を消す")
+                            Text(stringResource(R.string.clear_history))
                         }
                     }
                 },
@@ -68,15 +72,21 @@ fun ExportsScreen(
                 modifier = Modifier.fillMaxSize().padding(padding).padding(32.dp),
                 verticalArrangement = Arrangement.Center,
             ) {
-                Text("エクスポート履歴がありません", style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("exportsEmpty"))
+                Text(stringResource(R.string.no_export_history), style = MaterialTheme.typography.titleMedium, modifier = Modifier.testTag("exportsEmpty"))
             }
             batch.status == BatchStatus.DONE -> Column(modifier = Modifier.fillMaxSize().padding(padding).testTag("exportsSummary")) {
                 ListItem(
-                    headlineContent = { Text("エクスポート結果") },
+                    headlineContent = { Text(stringResource(R.string.export_result)) },
                     supportingContent = {
                         Column {
-                            Text("${batch.totalCount}件中 ${batch.succeededCount}件成功" + if (batch.failedCount > 0) "、${batch.failedCount}件失敗" else "")
-                            Text("完了日時: ${formatDetailDate(batch.updatedAtMillis)}")
+                            Text(
+                                if (batch.failedCount > 0) {
+                                    stringResource(R.string.result_summary_with_failures, batch.totalCount, batch.succeededCount, batch.failedCount)
+                                } else {
+                                    pluralStringResource(R.plurals.result_all_succeeded, batch.totalCount, batch.totalCount)
+                                },
+                            )
+                            Text(stringResource(R.string.finished_at, formatDetailDate(batch.updatedAtMillis)))
                         }
                     },
                     modifier = Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
@@ -91,15 +101,22 @@ fun ExportsScreen(
                                 Column {
                                     Text(statusText(job))
                                     if (job.status == ExportStatus.COMPLETED) {
-                                        Text("${formatSize(job.outputSizeBytes)} ・ DCIM/${MediaStoreGallery.FOLDER}")
+                                        Text(stringResource(R.string.joined, formatSize(job.outputSizeBytes), "DCIM/${MediaStoreGallery.FOLDER}"))
                                     }
-                                    job.errorMessage?.let { if (it.isNotEmpty()) Text(it) }
+                                    failureText(job)?.let { Text(it) }
+                                    // What the system reported, for a failure the app has no words
+                                    // for. It is not translated, so it sits below the localized line.
+                                    if (job.status == ExportStatus.FAILED && (job.failure ?: FailureReason.OTHER) == FailureReason.OTHER) {
+                                        job.errorMessage?.takeIf { it.isNotEmpty() }?.let {
+                                            Text(it, style = MaterialTheme.typography.bodySmall, modifier = Modifier.testTag("failureDetail_${job.id}"))
+                                        }
+                                    }
                                 }
                             },
                             trailingContent = {
                                 if (job.status == ExportStatus.QUEUED || job.status == ExportStatus.RUNNING) {
                                     IconButton(onClick = { onCancel(job.id) }, modifier = Modifier.testTag("cancelJob_${job.id}")) {
-                                        Icon(Icons.Filled.Cancel, contentDescription = "キャンセル")
+                                        Icon(Icons.Filled.Cancel, contentDescription = stringResource(R.string.cancel))
                                     }
                                 }
                             },
@@ -117,9 +134,21 @@ fun ExportsScreen(
     }
 }
 
+@Composable
 private fun statusText(job: ExportJob): String = when (job.status) {
-    ExportStatus.QUEUED -> "待機中"
-    ExportStatus.RUNNING -> "エクスポート中 ${job.progressPercent}%"
-    ExportStatus.COMPLETED -> "完了"
-    ExportStatus.FAILED -> "失敗"
+    ExportStatus.QUEUED -> stringResource(R.string.status_queued)
+    ExportStatus.RUNNING -> stringResource(R.string.status_running, job.progressPercent)
+    ExportStatus.COMPLETED -> stringResource(R.string.status_completed)
+    ExportStatus.FAILED -> stringResource(R.string.status_failed)
+}
+
+/** The failure in the reader's language. */
+@Composable
+private fun failureText(job: ExportJob): String? = if (job.status != ExportStatus.FAILED) null else when (job.failure) {
+    FailureReason.USB_REMOVED -> stringResource(R.string.error_usb_removed)
+    FailureReason.NO_SPACE -> stringResource(R.string.error_no_space)
+    FailureReason.INCOMPLETE_COPY -> stringResource(R.string.error_incomplete_copy)
+    FailureReason.EMPTY_OUTPUT -> stringResource(R.string.error_empty_output)
+    FailureReason.DESTINATION_UNAVAILABLE -> stringResource(R.string.error_destination_unavailable)
+    FailureReason.OTHER, null -> stringResource(R.string.error_unexpected)
 }

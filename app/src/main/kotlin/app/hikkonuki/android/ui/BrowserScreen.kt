@@ -71,6 +71,8 @@ import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.stringResource
+import app.hikkonuki.android.R
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
@@ -135,16 +137,16 @@ fun BrowserScreen(
                 TopAppBar(
                     colors = barColors,
                     windowInsets = WindowInsets(0, 0, 0, 0),
-                    title = { Text("${state.selectedIds.size}件を選択中") },
+                    title = { Text(stringResource(R.string.selected_count, state.selectedIds.size)) },
                     navigationIcon = {
                         IconButton(onClick = onClearSelection, modifier = Modifier.testTag("clearSelection")) {
-                            Icon(Icons.Filled.Close, contentDescription = "選択を解除")
+                            Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.clear_selection))
                         }
                     },
                     actions = {
                         // Text-only action: export lives on the FAB, so the bar stays minimal.
                         TextButton(onClick = onSelectAll, modifier = Modifier.testTag("selectAll")) {
-                            Text("すべて選択")
+                            Text(stringResource(R.string.select_all))
                         }
                     },
                 )
@@ -154,25 +156,25 @@ fun BrowserScreen(
                     colors = barColors,
                     windowInsets = WindowInsets(0, 0, 0, 0),
                     // The camera's own name while one is attached, the app's otherwise.
-                    title = { Text(state.deviceName ?: "Hikkonuki", maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                    title = { Text(state.deviceName ?: stringResource(R.string.app_name), maxLines = 1, overflow = TextOverflow.Ellipsis) },
                     actions = {
                         IconButton(onClick = onToggleLayout, modifier = Modifier.testTag("layoutToggle")) {
                             Icon(
                                 imageVector = if (state.layout == BrowserLayout.GRID) Icons.AutoMirrored.Filled.List else Icons.Filled.GridView,
-                                contentDescription = if (state.layout == BrowserLayout.GRID) "リスト表示に切り替え" else "グリッド表示に切り替え",
+                                contentDescription = stringResource(if (state.layout == BrowserLayout.GRID) R.string.switch_to_list else R.string.switch_to_grid),
                             )
                         }
-                        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = "再読み込み") }
+                        IconButton(onClick = onRefresh) { Icon(Icons.Filled.Refresh, contentDescription = stringResource(R.string.reload)) }
                         Box {
-                            IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = "メニュー") }
+                            IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.menu)) }
                             DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                                 DropdownMenuItem(
-                                    text = { Text("エクスポート状況") },
+                                    text = { Text(stringResource(R.string.export_status)) },
                                     onClick = { menuExpanded = false; onOpenExports() },
                                 )
                                 if (state.canPickFolder) {
                                     DropdownMenuItem(
-                                        text = { Text("USBフォルダを開く") },
+                                        text = { Text(stringResource(R.string.open_usb_folder)) },
                                         onClick = { menuExpanded = false; onPickFolder() },
                                         leadingIcon = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
                                     )
@@ -191,7 +193,7 @@ fun BrowserScreen(
                     onClick = onExportSelected,
                     modifier = Modifier.testTag("exportSelectedFab"),
                     icon = { Icon(Icons.Filled.Download, contentDescription = null) },
-                    text = { Text("エクスポート (${state.selectedIds.size})") },
+                    text = { Text(stringResource(R.string.export_count, state.selectedIds.size)) },
                 )
             }
         },
@@ -217,26 +219,22 @@ fun BrowserScreen(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                 ) {
                     Text(
-                        if (state.hasSavedFolder) "前回のフォルダに写真や動画が見つかりませんでした" else "写真や動画が見つかりませんでした",
+                        stringResource(if (state.hasSavedFolder) R.string.no_media_in_saved_folder_title else R.string.no_media_title),
                         style = MaterialTheme.typography.titleMedium,
                     )
                     Text(
-                        if (state.hasSavedFolder) {
-                            "USB接続を確認するか、DCIM内のフォルダを選び直してください。選んだフォルダは記憶され、次回から自動で読み込みます。"
-                        } else {
-                            "カメラのDCIM内にある写真・動画のフォルダを選んでください。選んだフォルダは記憶され、次回から自動で読み込みます。"
-                        },
+                        stringResource(if (state.hasSavedFolder) R.string.no_media_in_saved_folder_body else R.string.no_media_body),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     if (state.folderPermissionError) {
                         Text(
-                            "フォルダへのアクセス許可を保存できませんでした。もう一度選択してください。",
+                            stringResource(R.string.folder_permission_error),
                             color = MaterialTheme.colorScheme.error,
                             modifier = Modifier.testTag("folderPermissionError"),
                         )
                     }
                     androidx.compose.material3.Button(onClick = onPickFolder, modifier = Modifier.testTag("pickFolderButton")) {
-                        Text(if (state.hasSavedFolder) "別のUSBフォルダを選ぶ" else "USBフォルダを開く")
+                        Text(stringResource(if (state.hasSavedFolder) R.string.choose_another_usb_folder else R.string.open_usb_folder))
                     }
                 }
                 state.layout == BrowserLayout.GRID -> LazyVerticalGrid(
@@ -288,7 +286,7 @@ fun BrowserScreen(
                             if (selected) {
                                 Icon(
                                     Icons.Filled.CheckCircle,
-                                    contentDescription = "選択中",
+                                    contentDescription = stringResource(R.string.item_selected),
                                     tint = MaterialTheme.colorScheme.primary,
                                     modifier = Modifier.align(Alignment.TopEnd).padding(4.dp).size(22.dp),
                                 )
@@ -305,10 +303,10 @@ fun BrowserScreen(
                         val selected = item.id in state.selectedIds
                         ListItem(
                             headlineContent = { Text(item.displayName) },
-                            supportingContent = { Text("${formatSize(item.sizeBytes)} ・ ${formatDate(item.dateTakenMillis)}") },
+                            supportingContent = { Text(stringResource(R.string.joined, formatSize(item.sizeBytes), formatDate(item.dateTakenMillis))) },
                             leadingContent = { MediaThumbnail(item.uri, item.kind, modifier = Modifier.size(56.dp)) },
                             trailingContent = {
-                                if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = "選択中", tint = MaterialTheme.colorScheme.primary)
+                                if (selected) Icon(Icons.Filled.CheckCircle, contentDescription = stringResource(R.string.item_selected), tint = MaterialTheme.colorScheme.primary)
                             },
                             modifier = Modifier
                                 .fillMaxWidth()
@@ -356,7 +354,7 @@ fun UsbDisconnectedPlaceholder() {
     ) {
         Icon(Icons.Filled.Usb, contentDescription = null, modifier = Modifier.size(72.dp), tint = MaterialTheme.colorScheme.primary)
         Text(
-            text = "USBでカメラをさしてください",
+            text = stringResource(R.string.connect_camera),
             style = MaterialTheme.typography.titleLarge,
             modifier = Modifier.padding(top = 16.dp),
         )
