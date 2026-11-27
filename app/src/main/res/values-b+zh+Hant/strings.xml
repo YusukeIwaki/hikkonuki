@@ -16,6 +16,7 @@
     <string name="switch_to_grid">切換至格狀檢視</string>
     <string name="reload">重新載入</string>
     <string name="export_status">匯出狀態</string>
+    <string name="privacy_policy">隱私權政策</string>
     <string name="open_usb_folder">選擇 USB 資料夾</string>
     <string name="choose_another_usb_folder">選擇其他 USB 資料夾</string>
     <string name="no_media_title">找不到相片或影片</string>

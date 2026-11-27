@@ -16,6 +16,7 @@
     <string name="switch_to_grid">切换到网格视图</string>
     <string name="reload">重新加载</string>
     <string name="export_status">导出状态</string>
+    <string name="privacy_policy">隐私政策</string>
     <string name="open_usb_folder">选择 USB 文件夹</string>
     <string name="choose_another_usb_folder">选择其他 USB 文件夹</string>
     <string name="no_media_title">未找到照片或视频</string>

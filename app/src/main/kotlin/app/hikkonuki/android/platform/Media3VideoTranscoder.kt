@@ -4,8 +4,10 @@ import android.content.Context
 import android.media.MediaCodecList
 import android.os.Handler
 import android.os.Looper
+import androidx.annotation.OptIn
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MimeTypes
+import androidx.media3.common.util.UnstableApi
 import androidx.media3.effect.Presentation
 import androidx.media3.transformer.Composition
 import androidx.media3.transformer.DefaultEncoderFactory
@@ -34,6 +36,7 @@ import kotlin.coroutines.resumeWithException
  * re-encoded. It copes with device codec quirks the direct pipeline may not, and is the
  * path the previous app shipped with.
  */
+@OptIn(UnstableApi::class)
 class Media3VideoTranscoder(private val context: Context, private val source: AndroidSource) : VideoTranscoder {
     override val name: String = "media3"
 

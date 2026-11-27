@@ -1,5 +1,8 @@
 package app.hikkonuki.android.ui
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.net.Uri
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
@@ -27,6 +30,7 @@ import androidx.compose.foundation.lazy.grid.items as gridItems
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -37,6 +41,7 @@ import androidx.compose.material.icons.automirrored.filled.List
 import androidx.compose.material.icons.filled.MoreVert
 import androidx.compose.material.icons.filled.Refresh
 import androidx.compose.material.icons.filled.Usb
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
@@ -69,6 +74,8 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.stringResource
@@ -77,6 +84,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import kotlin.math.roundToInt
 
+private const val PRODUCT_SITE = "https://yusukeiwaki.github.io/hikkonuki/"
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
@@ -93,6 +101,26 @@ fun BrowserScreen(
     onOpenExports: () -> Unit,
     onPickFolder: () -> Unit,
 ) {
+    val context = LocalContext.current
+    val privacyPolicyUrl = if (LocalConfiguration.current.locales[0].language == "ja") {
+        "${PRODUCT_SITE}ja/privacy/"
+    } else {
+        "${PRODUCT_SITE}privacy/"
+    }
+    var showPrivacyPolicyUrl by remember { mutableStateOf(false) }
+    if (showPrivacyPolicyUrl) {
+        AlertDialog(
+            onDismissRequest = { showPrivacyPolicyUrl = false },
+            title = { Text(stringResource(R.string.privacy_policy)) },
+            text = { SelectionContainer { Text(privacyPolicyUrl) } },
+            confirmButton = {
+                TextButton(onClick = { showPrivacyPolicyUrl = false }) {
+                    Text(stringResource(android.R.string.ok))
+                }
+            },
+        )
+    }
+
     // Back in selection mode only exits selection; it must not pop the browser destination.
     BackHandler(enabled = state.selectionMode) { onClearSelection() }
 
@@ -179,6 +207,17 @@ fun BrowserScreen(
                                         leadingIcon = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
                                     )
                                 }
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(R.string.privacy_policy)) },
+                                    onClick = {
+                                        menuExpanded = false
+                                        try {
+                                            context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(privacyPolicyUrl)))
+                                        } catch (_: ActivityNotFoundException) {
+                                            showPrivacyPolicyUrl = true
+                                        }
+                                    },
+                                )
                             }
                         }
                     },

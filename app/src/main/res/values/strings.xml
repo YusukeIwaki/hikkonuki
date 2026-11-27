@@ -21,6 +21,7 @@
     <string name="switch_to_grid">Switch to grid view</string>
     <string name="reload">Reload</string>
     <string name="export_status">Export status</string>
+    <string name="privacy_policy">Privacy Policy</string>
     <string name="open_usb_folder">Select USB folder</string>
     <string name="choose_another_usb_folder">Select another USB folder</string>
     <string name="no_media_title">No photos or videos found</string>
