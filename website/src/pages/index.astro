@@ -24,7 +24,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
       <ul class="plain">
         <li><a href={`${base}usb-import/`}>USB import</a>: plug the camera in and its photos and videos are listed. It reads the camera as USB storage, over the cable.</li>
         <li><a href={`${base}browse/`}>Browse</a>: grid or list, long-press to select several, swipe through the details.</li>
-        <li><a href={`${base}video-slim/`}>2K conversion</a>: 4K video is scaled to a long edge of 2560 and re-encoded as HEVC. 10-bit stays 10-bit where the phone can encode it.</li>
+        <li><a href={`${base}video-slim/`}>2K conversion</a>: compatible 4K video is scaled to a long edge of 2560. The app prefers HEVC and keeps 10-bit video where the phone can encode it.</li>
         <li><a href={`${base}export/`}>Export</a>: keeps going after you leave the app, and copes with the cable being pulled halfway.</li>
       </ul>
 
@@ -32,7 +32,7 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
       <table class="spec">
         <tr><th>1. Plug in</th><td>Connect the camera to the phone with a USB-C cable. The app opens on the camera's photos and videos.</td></tr>
         <tr><th>2. Pick</th><td>Tap one to look at it, or long-press to select as many as you want.</td></tr>
-        <tr><th>3. Export</th><td>Photos are copied as they are. Videos are converted to 2K. Both land in <code>DCIM/Hikkonuki</code>, where the gallery and Google Photos see them.</td></tr>
+        <tr><th>3. Export</th><td>Photos are copied as they are. Compatible 4K videos are converted to 2K. Both land in <code>DCIM/Hikkonuki</code>, where the gallery and Google Photos see them.</td></tr>
       </table>
       <p class="note">The name is from the Japanese <i lang="ja">hikkonuku</i>, to yank something out.</p>
     </div>

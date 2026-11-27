@@ -17,7 +17,7 @@ const root = `${base}ja/`;
       <ul class="plain">
         <li><a href={`${root}usb-import/`}>USB取り込み</a>: カメラをさすと、中の写真と動画が一覧に並びます。カメラをUSBストレージとして、ケーブル経由で読みます。</li>
         <li><a href={`${root}browse/`}>写真・動画を見る</a>: グリッドとリストの切り替え、長押しで複数選択、詳細はスワイプでめくれます。</li>
-        <li><a href={`${root}video-slim/`}>2K変換</a>: 4K動画を長辺2560に縮小し、HEVCで書き出します。10bitの素材は、端末が対応していれば10bitのままです。</li>
+        <li><a href={`${root}video-slim/`}>2K変換</a>: 対応する4K動画を長辺2560に縮小します。HEVCを優先し、端末が対応していれば10bitのまま書き出します。</li>
         <li><a href={`${root}export/`}>エクスポート</a>: アプリを閉じても続きます。途中でケーブルが抜けても、後始末まで面倒を見ます。</li>
       </ul>
 
@@ -25,7 +25,7 @@ const root = `${base}ja/`;
       <table class="spec">
         <tr><th>1. さす</th><td>USB-Cケーブルでカメラとスマートフォンをつなぎます。アプリが開いて、カメラの中身が並びます。</td></tr>
         <tr><th>2. 選ぶ</th><td>タップで1件ずつ確認するか、長押しでまとめて選びます。</td></tr>
-        <tr><th>3. エクスポート</th><td>写真はそのままコピー、動画は2Kに変換して <code>DCIM/Hikkonuki</code> に保存します。ギャラリーにもGoogleフォトにも見える場所です。</td></tr>
+        <tr><th>3. エクスポート</th><td>写真はそのままコピーし、対応する4K動画は2Kに変換します。保存先はギャラリーやGoogleフォトから見える <code>DCIM/Hikkonuki</code> です。</td></tr>
       </table>
       <p class="note">名前は「引っこ抜く」から取りました。</p>
     </div>
