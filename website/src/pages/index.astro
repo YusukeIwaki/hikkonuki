@@ -18,7 +18,10 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
         That is the whole app. No ads, no account, no feed, no editor.
         It doesn't even have permission to use the internet.
       </p>
-      <p><a class="btn" href={`${base}usb-import/`}>How it works</a></p>
+      <p class="home-actions">
+        <a class="btn" href="https://play.google.com/store/apps/details?id=app.hikkonuki.android">Get it on Google Play</a>
+        <a href={`${base}usb-import/`}>How it works</a>
+      </p>
 
       <h2>What it does</h2>
       <ul class="plain">
