@@ -1,5 +1,6 @@
 ---
 import CameraGuide from "../../components/CameraGuide.astro";
+import Pocket4PConnectionIllustrations from "../../components/Pocket4PConnectionIllustrations.astro";
 ---
 
 <CameraGuide
@@ -8,8 +9,10 @@ import CameraGuide from "../../components/CameraGuide.astro";
   title="DJI Osmo Pocket 4Pの動画をUSBでAndroidに取り込む方法"
   description="DJI Osmo Pocket 4PをUSB OTGでAndroidスマホにつなぎ、DCIMから動画や写真をギャラリーに転送する手順を紹介します。"
   intro="DJI Osmo Pocket 4Pの動画や写真をUSB-CケーブルでAndroidスマホに取り込めます。HikkonukiはPocket 4Pで動作確認済みです。取り込みにはDJI Mimoの起動やWi-Fiでのペアリングは不要です。"
-  connection="Osmo Pocket 4Pのシステム設定で「USBモード」を選び、USB-C同士のデータケーブルでスマホとつなぎます。DJIはUSB 3.1対応ケーブルを案内しています。"
+  connection="Osmo Pocket 4Pのシステム設定で「USBモード」を選び、カメラ底面のUSB-C端子からスマホにつなぎます。接続メニューが表示されたら、一番上の「ファイル転送 / OTG接続」を選びます。DJIはUSB 3.1対応のデータケーブルを案内しています。"
 >
+  <Pocket4PConnectionIllustrations slot="connection-illustrations" lang="ja" />
+
   <h2>つないでも充電されるだけのとき</h2>
   <p>データ転送対応のケーブルを使っているか、カメラで「USBモード」を選んだかを確認します。AndroidにUSB接続の通知が出た場合は、その通知から外部ストレージを開き、カメラの <code>DCIM</code> フォルダが見えるか確認します。</p>
   <p><a href="https://www.dji.com/jp/osmo-pocket-4p/faq">DJI公式のOsmo Pocket 4P FAQ</a></p>

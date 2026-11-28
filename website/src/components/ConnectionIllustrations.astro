@@ -1,0 +1,62 @@
+---
+interface Props {
+  connectionLabel: string;
+  connectionCaption: string;
+  modeLabel: string;
+  modeCaption: string;
+}
+
+const { connectionLabel, connectionCaption, modeLabel, modeCaption } = Astro.props;
+---
+
+<div class="connection-illustrations">
+  <figure>
+    <svg viewBox="0 0 280 166" width="280" height="166" role="img" aria-label={connectionLabel}>
+      <slot name="connection" />
+    </svg>
+    <figcaption>{connectionCaption}</figcaption>
+  </figure>
+
+  <figure>
+    <svg viewBox="0 0 280 166" width="280" height="166" role="img" aria-label={modeLabel}>
+      <slot name="mode" />
+    </svg>
+    <figcaption>{modeCaption}</figcaption>
+  </figure>
+</div>
+
+<style>
+  .connection-illustrations {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(min(100%, 225px), 1fr));
+    align-items: start;
+    gap: 14px;
+    margin-block: 14px 20px;
+  }
+  figure { margin: 0; }
+  svg {
+    display: block;
+    width: 100%;
+    height: auto;
+    background: #f0f6f5;
+    border: 1px solid #dbe8e6;
+    border-radius: 12px;
+  }
+  svg :global(.outline), svg :global(.detail), svg :global(.glass), svg :global(.screen) { stroke: #365653; }
+  svg :global(.outline), svg :global(.screen) { fill: #fff; stroke-width: 2; }
+  svg :global(.glass) { fill: #e2eeec; }
+  svg :global(.detail), svg :global(.cable), svg :global(.check) {
+    fill: none;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+  svg :global(.detail) { stroke-width: 2.5; }
+  svg :global(.cable) { stroke: #18746d; stroke-width: 4; }
+  svg :global(.plug) { fill: #18746d; stroke: #fff; stroke-width: 1; }
+  svg :global(.device-label), svg :global(.menu-label) { fill: #284945; font-size: 12px; font-weight: 650; }
+  svg :global(.cable-label) { fill: #095550; font-size: 13px; font-weight: 700; }
+  svg :global(.selected-mode) { fill: #095550; }
+  svg :global(.mode-label) { fill: #fff; font-size: 15px; font-weight: 700; }
+  svg :global(.check) { stroke: #fff; stroke-width: 2.5; }
+  svg :global(.other-mode) { fill: #e6eeed; }
+</style>
