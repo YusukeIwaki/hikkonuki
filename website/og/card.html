@@ -94,24 +94,11 @@
       box-shadow: 0 0 0 38px rgb(97 166 153 / 8%), 0 0 0 77px rgb(97 166 153 / 4%);
     }
 
-    .cable-drop, .cable-loop { position: absolute; border: solid var(--cable); }
-
-    .cable-drop {
-      top: 337px;
-      left: 243px;
-      width: 30px;
-      height: 190px;
-      border-width: 7px 7px 0 0;
-      border-top-right-radius: 24px;
-    }
-
-    .cable-loop {
-      top: 522px;
-      left: 266px;
-      right: 169px;
-      height: 54px;
-      border-width: 0 7px 7px;
-      border-radius: 0 0 26px 26px;
+    .cable {
+      position: absolute;
+      inset: 0;
+      background: var(--cable);
+      clip-path: path("M 240 337 C 294 337 196 566 311 576 C 345 579 365 564 372 541 L 379 542 C 372 569 348 586 311 583 C 188 572 287 344 240 344 Z");
     }
 
     .action-camera {
@@ -215,12 +202,33 @@
       transform: translateX(-50%);
     }
 
-    .phone img {
+    .phone-screen {
+      position: relative;
+      display: grid;
+      place-items: center;
+      aspect-ratio: 9 / 20;
+      padding: 12px 11px;
+      border-radius: 24px;
+      background: #f9f8ff;
+      overflow: hidden;
+    }
+
+    .phone-screen::before {
+      content: "";
+      position: absolute;
+      top: 9px;
+      left: 50%;
+      width: 8px;
+      height: 8px;
+      border-radius: 50%;
+      background: #172523;
+      transform: translateX(-50%);
+    }
+
+    .phone-screen img {
       display: block;
       width: 100%;
       height: auto;
-      border-radius: 24px;
-      background: #edf2f5;
     }
   </style>
 </head>
@@ -232,15 +240,16 @@
       <p class="description">Camera photos and videos, straight to Android.</p>
     </div>
     <div class="scene">
-      <div class="cable-drop" aria-hidden="true"></div>
-      <div class="cable-loop" aria-hidden="true"></div>
+      <div class="cable" aria-hidden="true"></div>
       <div class="action-camera" aria-hidden="true">
         <div class="camera-display"></div>
         <div class="camera-lens"></div>
       </div>
       <figure class="phone">
-        <img src="../public/shots/en/08_selection.webp" width="1080" height="2400"
-          alt="Hikkonuki open on a phone connected to an action camera by USB">
+        <div class="phone-screen">
+          <img src="../public/shots/en/08_selection.webp" width="1080" height="2400"
+            alt="Hikkonuki open on a phone connected to an action camera by USB">
+        </div>
       </figure>
     </div>
   </main>
