@@ -57,7 +57,10 @@ const t = {
       <h2>{t.steps}</h2>
       <p>{t.requirements}</p>
       <ol class="steps">
-        <li>{connection}</li>
+        <li>
+          {connection}
+          <slot name="connection-illustrations" />
+        </li>
         <li>{t.selectFolder} <code>DCIM</code>{lang === "ja" ? " フォルダへのアクセスを許可します。" : " folder."}</li>
         <li>{t.selectFiles}</li>
       </ol>

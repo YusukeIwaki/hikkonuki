@@ -1,5 +1,6 @@
 ---
 import CameraGuide from "../../components/CameraGuide.astro";
+import AceProConnectionIllustrations from "../../components/AceProConnectionIllustrations.astro";
 ---
 
 <CameraGuide
@@ -8,10 +9,12 @@ import CameraGuide from "../../components/CameraGuide.astro";
   title="Insta360 Ace Pro 2の動画をUSBでAndroidに取り込む方法"
   description="Insta360 Ace Pro 2とAndroidスマホをUSBドライブモードでつなぎ、MP4動画や写真をギャラリーに転送する手順を紹介します。"
   intro="Insta360 Ace Pro 2で撮ったMP4動画や写真を、USB-CケーブルでAndroidスマホに保存できます。HikkonukiはAce Pro 2で動作確認済みです。Wi-Fiでペアリングせず、カメラをUSBストレージとして読み取ります。"
-  connection="Ace Pro 2の電源を入れ、データ転送対応のUSB-Cケーブルでスマホにつなぎます。カメラにUSB接続の選択肢が出たら「USBドライブモード」（U-Disk Mode）を選びます。"
+  connection="Ace Pro 2の電源を入れ、データ転送対応のUSB-Cケーブルでスマホにつなぎます。カメラにUSB接続の選択肢が出たら「U-Diskモード」（USBドライブモード）を選びます。"
 >
+  <AceProConnectionIllustrations slot="connection-illustrations" lang="ja" />
+
   <h2>Androidにカメラが表示されないとき</h2>
-  <p>データ転送対応のケーブルを使い、カメラで「USBドライブモード」を選んだか確認します。スマホの設定にOTGの項目があればオンにして、フォルダ選択画面でカメラのUSBドライブと <code>DCIM</code> フォルダを探します。</p>
+  <p>データ転送対応のケーブルを使い、カメラで「U-Diskモード」を選んだか確認します。スマホの設定にOTGの項目があればオンにして、フォルダ選択画面でカメラのUSBドライブと <code>DCIM</code> フォルダを探します。</p>
   <p><a href="https://onlinemanual.insta360.com/acepro2/en-us/operation-tutorials/connect/connect-app">Insta360公式のAce Pro 2のUSB接続手順（英語）</a></p>
 
   <h2>Insta360 X4やX5の360度動画は取り込める？</h2>
