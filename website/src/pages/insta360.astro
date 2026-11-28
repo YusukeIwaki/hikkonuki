@@ -1,0 +1,20 @@
+---
+import CameraGuide from "../components/CameraGuide.astro";
+---
+
+<CameraGuide
+  lang="en"
+  path="insta360/"
+  title="Transfer Insta360 Ace Pro 2 videos to Android via USB"
+  description="Connect an Insta360 Ace Pro 2 to Android in U-Disk Mode and import MP4 clips and photos to your phone’s gallery with Hikkonuki."
+  intro="With an Insta360 Ace Pro 2 and a USB-C data cable, you can save MP4 clips and photos directly to your Android phone. Hikkonuki was tested with the Ace Pro 2. It reads the camera as USB storage without Wi-Fi pairing."
+  connection="Turn on the Ace Pro 2, connect it to your phone with a USB-C data cable, and select U-Disk Mode when the camera shows the USB options."
+>
+  <h2>If Android doesn’t show the camera</h2>
+  <p>Try a data cable and check that the camera is in U-Disk Mode. Some phones have an OTG setting you need to turn on. In the folder picker, look for the camera’s USB drive and its <code>DCIM</code> folder.</p>
+  <p><a href="https://onlinemanual.insta360.com/acepro2/en-us/operation-tutorials/connect/connect-app">Insta360’s Ace Pro 2 USB connection instructions</a></p>
+
+  <h2>What about Insta360 X4 or X5 360° videos?</h2>
+  <p>Hikkonuki imports standard MP4 and MOV files from USB storage. It cannot read Insta360’s <code>.insv</code> 360° video files or stitch footage. Use the Insta360 app or Insta360 Studio to export those clips. Hikkonuki compatibility with the X4 and X5 is unverified.</p>
+  <p><a href="https://onlinemanual.insta360.com/x5/en-us/operating-tutorials/storage/fileformat">Insta360’s X-series file formats</a></p>
+</CameraGuide>

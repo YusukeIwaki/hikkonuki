@@ -1,0 +1,20 @@
+---
+import CameraGuide from "../components/CameraGuide.astro";
+---
+
+<CameraGuide
+  lang="en"
+  path="osmo-pocket/"
+  title="Transfer DJI Osmo Pocket 4P videos to Android via USB"
+  description="Connect a DJI Osmo Pocket 4P to Android over USB OTG, select its DCIM folder and save videos to your gallery with Hikkonuki."
+  intro="Use a USB-C cable to import photos and videos from the DJI Osmo Pocket 4P directly to your Android phone. Hikkonuki was tested with the Pocket 4P and can read the camera’s files without opening DJI Mimo or pairing over Wi-Fi."
+  connection="Select USB Mode in the camera’s system settings, then connect the Osmo Pocket 4P to your phone with a USB-C to USB-C data cable. DJI recommends USB 3.1 for this connection."
+>
+  <h2>If the Osmo Pocket only charges</h2>
+  <p>Check that the cable carries data and USB Mode is selected on the camera. If Android shows a USB notification, open it to view the connected storage. You should be able to browse the camera’s <code>DCIM</code> folder.</p>
+  <p><a href="https://www.dji.com/osmo-pocket-4p/faq">DJI Osmo Pocket 4P FAQ</a></p>
+
+  <h2>Does this work with the Osmo Pocket 3 or Pocket 4?</h2>
+  <p>DJI documents OTG transfer for the Osmo Pocket 3 and Pocket 4. Hikkonuki has been tested with the Pocket 4P. Compatibility with the Pocket 3 and Pocket 4 is unverified. To try either model, first check whether Android’s folder picker can open the camera’s <code>DCIM</code> folder.</p>
+  <p><a href="https://repair.dji.com/help/content?customId=01700007307&amp;documentType=&amp;lang=en&amp;paperDocType=ARTICLE&amp;re=US&amp;spaceId=17">DJI’s guide to USB OTG on Android</a></p>
+</CameraGuide>

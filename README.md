@@ -2,6 +2,8 @@
 
 English | [日本語](README.ja.md)
 
+[Official website and USB import guides](https://yusukeiwaki.github.io/hikkonuki/)
+
 An Android app that pulls photos and videos off an Osmo Pocket 4P or Insta360 Ace Pro 2 over **USB**.
 Plug the camera into the phone, pick what you want, and export: videos are converted to 2K HEVC, photos are copied as they are, and everything lands in `DCIM/Hikkonuki`, where Google Photos picks it up.
 

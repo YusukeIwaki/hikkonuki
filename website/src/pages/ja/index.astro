@@ -1,22 +1,29 @@
 ---
 import Layout from "../../layouts/Layout.astro";
 import DeviceFrame from "../../components/DeviceFrame.astro";
+import { playUrl } from "../../site";
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 const root = `${base}ja/`;
 ---
 
-<Layout lang="ja" path="">
+<Layout lang="ja" path="" description="Hikkonukiは、カメラの動画・写真をUSBでAndroidに取り込む無料アプリ。DJI Osmo Pocket 4PやInsta360 Ace Pro 2から転送し、対応する4K動画を2Kに変換してギャラリーから共有できます。">
   <div class="cols">
     <div>
-      <h1>カメラの4K動画を、USBでひっこぬいて2Kでシェア。</h1>
-      <p class="lead">4Kの動画は重くて、そのままでは人に送れません。Googleフォトの容量もすぐ埋まります。Hikkonukiは、ジンバルカメラやアクションカメラをUSBケーブルでスマートフォンにつなぎ、写真と動画を取り込むAndroidアプリです。動画は端末の上で2Kに変換してからギャラリーに保存します。あとはそこからシェアするなり、Googleフォトのバックアップに任せるなりしてください。</p>
+      <h1>カメラの動画・写真をUSBでAndroidに取り込む</h1>
+      <p class="lead">Hikkonukiは、ジンバルカメラやアクションカメラをUSBケーブルでスマホにつなぎ、動画や写真を取り込む無料のAndroidアプリです。対応する4K動画は2Kに縮めて保存でき、ギャラリーから共有したり、Googleフォトにバックアップしたりできます。</p>
       <p class="lead">できるのはそれだけです。広告も、アカウント登録も、おすすめ動画も、編集機能もありません。インターネットに接続する権限すら持っていません。</p>
       <p class="home-actions">
-        <a class="play-badge" href="https://play.google.com/store/apps/details?id=app.hikkonuki.android">
+        <a class="play-badge" href={playUrl}>
           <img src={`${base}play-badge/ja.png`} width="646" height="250" alt="Google Play で手に入れよう" />
         </a>
         <a href={`${root}usb-import/`}>使い方を見る</a>
       </p>
+
+      <h2>カメラ別のUSB取り込みガイド</h2>
+      <ul class="plain">
+        <li><a href={`${root}osmo-pocket/`}>DJI Osmo Pocket 4Pの動画をAndroidに転送する</a></li>
+        <li><a href={`${root}insta360/`}>Insta360 Ace Pro 2の動画をAndroidに転送する</a></li>
+      </ul>
 
       <h2>できること</h2>
       <ul class="plain">

@@ -1,0 +1,82 @@
+---
+import Layout from "../layouts/Layout.astro";
+import DeviceFrame from "./DeviceFrame.astro";
+import { playUrl } from "../site";
+
+interface Props {
+  lang: "en" | "ja";
+  path: "osmo-pocket/" | "insta360/";
+  title: string;
+  description: string;
+  intro: string;
+  connection: string;
+}
+
+const { lang, path, title, description, intro, connection } = Astro.props;
+const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
+const root = lang === "ja" ? `${base}ja/` : base;
+const t = {
+  en: {
+    steps: "Connect, select, and export",
+    requirements: "You’ll need a phone running Android 11 or later with USB OTG support and a USB-C data cable.",
+    selectFolder: "Open Hikkonuki. On the first connection, tap “Select USB folder” if prompted and allow access to the camera’s",
+    selectFiles: "Long-press to select the clips or photos you want, then tap “Export”. Keep the cable connected until the export finishes.",
+    sharing: "Where to find and share your videos",
+    output: "Open your Android gallery to share the files from",
+    conversion: "Hikkonuki copies photos and can shrink compatible 4K video to 2K (up to 2560 pixels on the long edge) during import.",
+    conversionLink: "See which videos are converted to 2K",
+    screenshot: "Hikkonuki’s media grid with three files selected for export",
+    caption: "Select the files you want to save to your phone.",
+    help: "USB import and folder access",
+    install: "Get Hikkonuki on Google Play",
+  },
+  ja: {
+    steps: "USB接続から取り込みまでの手順",
+    requirements: "USB OTGに対応したAndroid 11以降のスマホと、データ転送対応のUSB-Cケーブルを用意します。",
+    selectFolder: "Hikkonukiを開きます。初回は「USBフォルダを開く」が出たらタップし、カメラの",
+    selectFiles: "取り込みたい動画や写真を長押しで選び、「エクスポート」をタップします。処理が終わるまでケーブルをつないでおきます。",
+    sharing: "保存先と動画をシェアする方法",
+    output: "保存先は",
+    conversion: "写真はコピーされ、対応する4K動画は取り込み時に2K（長辺最大2560ピクセル）に縮められます。",
+    conversionLink: "2Kに変換される条件を見る",
+    screenshot: "Hikkonukiの一覧で取り込むファイルを3件選択した画面",
+    caption: "スマホに保存したいファイルを選びます。",
+    help: "USB取り込みとフォルダ選択について",
+    install: "Google PlayでHikkonukiを入手",
+  },
+}[lang];
+---
+
+<Layout lang={lang} path={path} title={title} description={description}>
+  <h1>{title}</h1>
+  <p class="lead">{intro}</p>
+  <p><a href={playUrl}>{t.install}</a></p>
+
+  <div class="cols">
+    <div>
+      <h2>{t.steps}</h2>
+      <p>{t.requirements}</p>
+      <ol class="steps">
+        <li>{connection}</li>
+        <li>{t.selectFolder} <code>DCIM</code>{lang === "ja" ? " フォルダへのアクセスを許可します。" : " folder."}</li>
+        <li>{t.selectFiles}</li>
+      </ol>
+
+      <h2>{t.sharing}</h2>
+      <p>{t.output} <code>DCIM/Hikkonuki</code>{lang === "ja" ? " です。スマホのギャラリーを開いて共有できます。" : "."} {t.conversion}</p>
+      <p><a href={`${root}video-slim/`}>{t.conversionLink}</a></p>
+
+      <slot />
+    </div>
+    <DeviceFrame src={`${base}shots/${lang}/08_selection.webp`} alt={t.screenshot} caption={t.caption} />
+  </div>
+
+  <div class="next">
+    <p><a href={`${root}usb-import/`}>{t.help}</a></p>
+  </div>
+</Layout>
+
+<style>
+  .steps { padding-inline-start: 1.5em; }
+  .steps li + li { margin-top: 8px; }
+</style>

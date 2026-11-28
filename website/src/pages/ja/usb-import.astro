@@ -5,9 +5,9 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 const root = `${base}ja/`;
 ---
 
-<Layout lang="ja" path="usb-import/" title="USB取り込み">
-  <h1>USB取り込み</h1>
-  <p class="lead">カメラはUSBでつなぐと、USBメモリと同じようにストレージとして見えます。Hikkonukiはそこから写真と動画を直接読みます。Wi-Fiでのペアリングも、カメラ用のアカウントも要りません。</p>
+<Layout lang="ja" path="usb-import/" title="カメラの動画・写真をUSBでAndroidに取り込む方法" description="カメラをUSBケーブルでAndroidスマホにつなぎ、DCIMフォルダを選んで動画や写真をギャラリーに取り込む手順を紹介します。">
+  <h1>カメラの動画・写真をUSBでAndroidに取り込む方法</h1>
+  <p class="lead">カメラをデータ転送対応のUSB-Cケーブルで、Android 11以降のスマホにつなぎます。スマホがカメラをUSBストレージとして認識すれば、Hikkonukiで動画や写真を直接取り込めます。Wi-Fiでのペアリングは不要です。</p>
 
   <div class="cols">
     <div>
@@ -29,7 +29,11 @@ const root = `${base}ja/`;
       <p>決めた日時は、ギャラリーに出す前にファイルへ書き込みます。Googleフォトで、取り込んだ日ではなく撮った日の位置に並べるためです。</p>
 
       <h2>対応するカメラ</h2>
-      <p>ポケットサイズのジンバルカメラ1機種と、アクションカメラ1機種で開発・確認しています。USBストレージとして見えるカメラなら同じように検出しますが、ほかの機種は試していません。</p>
+      <p>Hikkonukiは以下の2機種で開発・動作確認しました。ほかの機種では、USB接続したカメラの <code>DCIM</code> をAndroidのフォルダ選択画面から開けるか確認してください。</p>
+      <ul class="plain">
+        <li><a href={`${root}osmo-pocket/`}>DJI Osmo Pocket 4Pの接続ガイド</a></li>
+        <li><a href={`${root}insta360/`}>Insta360 Ace Pro 2の接続ガイド</a></li>
+      </ul>
     </div>
     <DeviceFrame src={`${base}shots/ja/01_no_camera.webp`} alt="カメラ未接続時の待機画面" caption="未接続のときはこれだけ。さすと一覧に切り替わります。" />
   </div>

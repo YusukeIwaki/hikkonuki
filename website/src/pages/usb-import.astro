@@ -4,9 +4,9 @@ import DeviceFrame from "../components/DeviceFrame.astro";
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 ---
 
-<Layout lang="en" path="usb-import/" title="USB import">
-  <h1>USB import</h1>
-  <p class="lead">Connected over USB, the camera shows up as storage, like a memory stick. Hikkonuki reads the photos and videos straight off it. There is no Wi-Fi pairing and no camera account.</p>
+<Layout lang="en" path="usb-import/" title="How to Import Camera Photos & Videos to Android via USB" description="Connect your camera to Android with a USB data cable, choose the camera’s DCIM folder, and save photos and videos to your gallery with Hikkonuki.">
+  <h1>How to import camera photos and videos to Android via USB</h1>
+  <p class="lead">Connect your camera to a phone running Android 11 or later with a USB-C data cable. Hikkonuki reads photos and videos when the phone can open the camera as USB storage, so you can import over the cable without Wi-Fi pairing.</p>
 
   <div class="cols">
     <div>
@@ -27,8 +27,12 @@ const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
       <p>For video, the date stored in the file is compared with the timestamp in the file name. If they differ by a plausible time zone offset, the stored date is used and the difference is kept as the camera's time zone. If the stored date is unset, the file name is used.</p>
       <p>The result is written into the exported file before it reaches the gallery, so Google Photos sorts the clip by when it was shot, not by when it was imported.</p>
 
-      <h2>Cameras</h2>
-      <p>Hikkonuki was built and tested with one pocket gimbal camera and one action camera. Other cameras that mount as USB storage are detected the same way, but have not been tested.</p>
+      <h2>Which cameras work?</h2>
+      <p>Hikkonuki was developed and tested with these two cameras. For other models, check whether the camera’s <code>DCIM</code> folder is accessible from Android’s folder picker over USB.</p>
+      <ul class="plain">
+        <li><a href={`${base}osmo-pocket/`}>DJI Osmo Pocket 4P connection guide</a></li>
+        <li><a href={`${base}insta360/`}>Insta360 Ace Pro 2 connection guide</a></li>
+      </ul>
     </div>
     <DeviceFrame src={`${base}shots/en/01_no_camera.webp`} alt="Waiting screen with no camera connected" caption="Nothing connected. Plugging a camera in switches to the list." />
   </div>

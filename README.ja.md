@@ -2,6 +2,8 @@
 
 [English](README.md) | 日本語
 
+[公式サイトとUSB取り込みガイド](https://yusukeiwaki.github.io/hikkonuki/ja/)
+
 Osmo Pocket 4P / Insta360 Ace Pro 2 を **USB** でAndroidにつなぎ、写真と動画をスマートフォンへ取り込むアプリです。
 カメラをつないで、取り込みたいものを選んでエクスポートするだけです。動画は2KのHEVCに変換し、写真はそのままコピーして、`DCIM/Hikkonuki` に保存します。Googleフォトが見える場所なので、アップロードはGoogleフォトに任せます。
 

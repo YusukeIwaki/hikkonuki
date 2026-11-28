@@ -1,29 +1,34 @@
 ---
 import Layout from "../layouts/Layout.astro";
 import DeviceFrame from "../components/DeviceFrame.astro";
+import { playUrl } from "../site";
 const base = import.meta.env.BASE_URL.replace(/\/?$/, "/");
 ---
 
-<Layout lang="en" path="">
+<Layout lang="en" path="" description="Hikkonuki is a free Android app for importing camera photos and videos over USB. Copy from a DJI Osmo Pocket 4P or Insta360 Ace Pro 2, shrink compatible 4K videos to 2K, and share from your gallery.">
   <div class="cols">
     <div>
-      <h1>Pull footage off your camera over USB. Share it at 2K.</h1>
+      <h1>Import camera videos to Android over USB</h1>
       <p class="lead">
-        4K clips are too big to send to anyone, and they fill up Google Photos fast.
-        Hikkonuki copies photos and videos from a gimbal camera or an action camera over a USB cable,
-        converts the video to 2K on the phone, and saves it to the gallery.
-        Share it from there, or let Google Photos back it up.
+        Hikkonuki is a free Android app that imports photos and videos from a gimbal or action camera over USB.
+        It can shrink compatible 4K videos to 2K as it saves them to your phone, ready to share from your gallery or back up with Google Photos.
       </p>
       <p class="lead">
         That is the whole app. No ads, no account, no feed, no editor.
         It doesn't even have permission to use the internet.
       </p>
       <p class="home-actions">
-        <a class="play-badge" href="https://play.google.com/store/apps/details?id=app.hikkonuki.android">
+        <a class="play-badge" href={playUrl}>
           <img src={`${base}play-badge/en.png`} width="646" height="250" alt="Get it on Google Play" />
         </a>
         <a href={`${base}usb-import/`}>How it works</a>
       </p>
+
+      <h2>Camera connection guides</h2>
+      <ul class="plain">
+        <li><a href={`${base}osmo-pocket/`}>DJI Osmo Pocket 4P USB transfer to Android</a></li>
+        <li><a href={`${base}insta360/`}>Insta360 Ace Pro 2 USB transfer to Android</a></li>
+      </ul>
 
       <h2>What it does</h2>
       <ul class="plain">
